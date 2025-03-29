@@ -71,127 +71,109 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from "vue";
+<script lang="ts" setup>
+import { ref } from "vue";
 import axios from "axios";
 
-export default defineComponent({
-  name: "UploadView",
-  setup() {
-    const fileInput = ref<HTMLInputElement | null>(null);
-    const selectedFiles = ref<File[]>([]);
-    const uploading = ref(false);
-    const uploadResult = ref<{
-      success: boolean;
-      message: string;
-      files?: string[];
-    } | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+const selectedFiles = ref<File[]>([]);
+const uploading = ref(false);
+const uploadResult = ref<{
+  success: boolean;
+  message: string;
+  files?: string[];
+} | null>(null);
 
-    const triggerFileInput = () => {
-      fileInput.value?.click();
+const triggerFileInput = () => {
+  fileInput.value?.click();
+};
+
+const handleFileSelect = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  if (input.files) {
+    addFiles(Array.from(input.files));
+  }
+};
+
+const handleDrop = (event: DragEvent) => {
+  if (event.dataTransfer?.files) {
+    addFiles(Array.from(event.dataTransfer.files));
+  }
+};
+
+const addFiles = (files: File[]) => {
+  const pdfFiles = files.filter((file) => file.type === "application/pdf");
+  if (pdfFiles.length) {
+    selectedFiles.value.push(...pdfFiles);
+  }
+};
+
+const clearFiles = () => {
+  selectedFiles.value = [];
+  if (fileInput.value) {
+    fileInput.value.value = "";
+  }
+};
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) {
+    return bytes + " B";
+  } else if (bytes < 1024 * 1024) {
+    return (bytes / 1024).toFixed(2) + " KB";
+  } else {
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  }
+};
+
+const uploadFiles = async () => {
+  if (selectedFiles.value.length === 0) {
+    uploadResult.value = {
+      success: false,
+      message: "请先选择文件",
     };
+    return;
+  }
 
-    const handleFileSelect = (event: Event) => {
-      const input = event.target as HTMLInputElement;
-      if (input.files) {
-        addFiles(Array.from(input.files));
+  uploading.value = true;
+  uploadResult.value = null;
+
+  try {
+    const formData = new FormData();
+    selectedFiles.value.forEach((file) => {
+      formData.append("pdfs", file);
+    });
+
+    const response = await axios.post(
+      "http://localhost:5000/upload-pdfs",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       }
+    );
+
+    uploadResult.value = {
+      success: true,
+      message: response.data.message,
+      files: response.data.files,
     };
 
-    const handleDrop = (event: DragEvent) => {
-      if (event.dataTransfer?.files) {
-        addFiles(Array.from(event.dataTransfer.files));
-      }
+    // 上传成功后清空文件列表
+    clearFiles();
+  } catch (error) {
+    let message = "上传失败";
+    if (axios.isAxiosError(error) && error.response) {
+      message = error.response.data.message || message;
+    }
+    uploadResult.value = {
+      success: false,
+      message,
     };
-
-    const addFiles = (files: File[]) => {
-      const pdfFiles = files.filter((file) => file.type === "application/pdf");
-      if (pdfFiles.length) {
-        selectedFiles.value.push(...pdfFiles);
-      }
-    };
-
-    const clearFiles = () => {
-      selectedFiles.value = [];
-      if (fileInput.value) {
-        fileInput.value.value = "";
-      }
-    };
-
-    const formatFileSize = (bytes: number): string => {
-      if (bytes < 1024) {
-        return bytes + " B";
-      } else if (bytes < 1024 * 1024) {
-        return (bytes / 1024).toFixed(2) + " KB";
-      } else {
-        return (bytes / (1024 * 1024)).toFixed(2) + " MB";
-      }
-    };
-
-    const uploadFiles = async () => {
-      if (selectedFiles.value.length === 0) {
-        uploadResult.value = {
-          success: false,
-          message: "请先选择文件",
-        };
-        return;
-      }
-
-      uploading.value = true;
-      uploadResult.value = null;
-
-      try {
-        const formData = new FormData();
-        selectedFiles.value.forEach((file) => {
-          formData.append("pdfs", file);
-        });
-
-        const response = await axios.post(
-          "http://localhost:5000/upload-pdfs",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-
-        uploadResult.value = {
-          success: true,
-          message: response.data.message,
-          files: response.data.files,
-        };
-
-        // 上传成功后清空文件列表
-        clearFiles();
-      } catch (error) {
-        let message = "上传失败";
-        if (axios.isAxiosError(error) && error.response) {
-          message = error.response.data.message || message;
-        }
-        uploadResult.value = {
-          success: false,
-          message,
-        };
-      } finally {
-        uploading.value = false;
-      }
-    };
-
-    return {
-      fileInput,
-      selectedFiles,
-      uploading,
-      uploadResult,
-      triggerFileInput,
-      handleFileSelect,
-      handleDrop,
-      clearFiles,
-      uploadFiles,
-      formatFileSize,
-    };
-  },
-});
+  } finally {
+    uploading.value = false;
+  }
+};
 </script>
 
 <style scoped>
