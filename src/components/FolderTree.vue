@@ -23,100 +23,84 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from "vue";
+<script setup lang="ts">
+import { ref } from "vue";
 import { Folder, FolderOpened, Document } from "@element-plus/icons-vue";
 
-export default defineComponent({
-  name: "FolderTree",
-  components: {
-    Folder,
-    FolderOpened,
-    Document,
+const folderData = ref([
+  {
+    id: 1,
+    label: "Home",
+    icon: "home",
   },
-  setup() {
-    const folderData = ref([
+  {
+    id: 2,
+    label: "My Drive",
+    icon: "folder",
+    children: [
       {
-        id: 1,
-        label: "Home",
-        icon: "home",
+        id: 21,
+        label: "Colab Notebooks",
+        icon: "folder",
+        children: [],
       },
       {
-        id: 2,
-        label: "My Drive",
+        id: 22,
+        label: "UMich EECS 498-007...",
         icon: "folder",
         children: [
           {
-            id: 21,
-            label: "Colab Notebooks",
-            icon: "folder",
-            children: [],
-          },
-          {
-            id: 22,
-            label: "UMich EECS 498-007...",
+            id: 221,
+            label: "2019_A4_pytorch",
             icon: "folder",
             children: [
               {
-                id: 221,
-                label: "2019_A4_pytorch",
+                id: 2211,
+                label: "A1",
                 icon: "folder",
-                children: [
-                  {
-                    id: 2211,
-                    label: "A1",
-                    icon: "folder",
-                  },
-                  {
-                    id: 2212,
-                    label: "A2",
-                    icon: "folder",
-                  },
-                  {
-                    id: 2213,
-                    label: "A3",
-                    icon: "folder",
-                  },
-                  {
-                    id: 2214,
-                    label: "A4",
-                    icon: "folder",
-                  },
-                  {
-                    id: 2215,
-                    label: "A5",
-                    icon: "folder",
-                  },
-                  {
-                    id: 2216,
-                    label: "A6",
-                    icon: "folder",
-                  },
-                ],
+              },
+              {
+                id: 2212,
+                label: "A2",
+                icon: "folder",
+              },
+              {
+                id: 2213,
+                label: "A3",
+                icon: "folder",
+              },
+              {
+                id: 2214,
+                label: "A4",
+                icon: "folder",
+              },
+              {
+                id: 2215,
+                label: "A5",
+                icon: "folder",
+              },
+              {
+                id: 2216,
+                label: "A6",
+                icon: "folder",
               },
             ],
           },
         ],
       },
-    ]);
-
-    const defaultProps = {
-      children: "children",
-      label: "label",
-    };
-
-    const handleNodeClick = (data: any) => {
-      console.log(data);
-      // 这里可以添加点击文件夹时的逻辑，例如加载文件列表等
-    };
-
-    return {
-      folderData,
-      defaultProps,
-      handleNodeClick,
-    };
+    ],
   },
-});
+]);
+
+const defaultProps = {
+  children: "children",
+  label: "label",
+};
+
+const handleNodeClick = (data: any) => {
+  console.log(data);
+  // 这里可以添加点击文件夹时的逻辑，例如加载文件列表等
+};
 </script>
 
 <style scoped>

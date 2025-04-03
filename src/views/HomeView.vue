@@ -1,19 +1,11 @@
 <template>
   <div class="home">
-    <Welcome class="welcome-section" />
+    <WelcomeComponent class="welcome-section" />
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
-import Welcome from "@/components/Welcome.vue";
-
-export default defineComponent({
-  name: "HomeView",
-  components: {
-    Welcome,
-  },
-});
+<script setup lang="ts">
+import WelcomeComponent from "@/components/WelcomeComponent.vue";
 </script>
 
 <style scoped>

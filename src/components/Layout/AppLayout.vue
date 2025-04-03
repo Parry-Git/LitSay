@@ -78,15 +78,13 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from "vue";
+<script setup lang="ts">
+import { ref } from "vue";
 import {
   Search,
   Setting,
   Grid,
   Plus,
-  HomeFilled,
-  Document,
   Monitor,
   Share,
   Clock,
@@ -94,28 +92,7 @@ import {
 } from "@element-plus/icons-vue";
 import FolderTree from "@/components/FolderTree.vue";
 
-export default defineComponent({
-  name: "AppLayout",
-  components: {
-    Search,
-    Setting,
-    Grid,
-    Plus,
-    // HomeFilled,
-    // Document,
-    Monitor,
-    Share,
-    Clock,
-    Star,
-    FolderTree,
-  },
-  setup() {
-    const searchQuery = ref("");
-    return {
-      searchQuery,
-    };
-  },
-});
+const searchQuery = ref("");
 </script>
 
 <style scoped>
