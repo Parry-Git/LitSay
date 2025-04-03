@@ -60,8 +60,8 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from "vue";
+<script setup lang="ts">
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import {
   Document,
@@ -73,38 +73,18 @@ import {
   Files,
 } from "@element-plus/icons-vue";
 
-export default defineComponent({
-  name: "WelcomeComponent",
-  components: {
-    Document,
-    FolderOpened,
-    Upload,
-    Search,
-    Share,
-    Plus,
-    Files,
-  },
-  setup() {
-    const router = useRouter();
-    // 模拟文件数量，实际项目中应该从API或状态管理中获取
-    const fileCount = ref(12);
+const router = useRouter();
+// 模拟文件数量，实际项目中应该从API或状态管理中获取
+const fileCount = ref(12);
 
-    const goToUpload = () => {
-      router.push("/upload");
-    };
+const goToUpload = () => {
+  router.push("/upload");
+};
 
-    const goToFiles = () => {
-      // 可以添加导航到文件列表的逻辑
-      // 或者滚动到当前页面的文件列表部分
-    };
-
-    return {
-      fileCount,
-      goToUpload,
-      goToFiles,
-    };
-  },
-});
+const goToFiles = () => {
+  // 可以添加导航到文件列表的逻辑
+  // 或者滚动到当前页面的文件列表部分
+};
 </script>
 
 <style scoped>
