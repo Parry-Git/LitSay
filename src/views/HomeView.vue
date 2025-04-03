@@ -1,17 +1,17 @@
 <template>
   <div class="home">
-    <FileList />
+    <Welcome class="welcome-section" />
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import FileList from "@/components/FileList.vue";
+import Welcome from "@/components/Welcome.vue";
 
 export default defineComponent({
   name: "HomeView",
   components: {
-    FileList,
+    Welcome,
   },
 });
 </script>
@@ -20,6 +20,9 @@ export default defineComponent({
 .home {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .home-container {

@@ -1,7 +1,7 @@
 <template>
   <div class="file-list-container">
     <h2>My Files</h2>
-    <el-table :data="fileList" style="width: 100%">
+    <el-table :data="fielList" style="width: 100%">
       <el-table-column>
         <template #default="scope">
           <div class="file-item">
