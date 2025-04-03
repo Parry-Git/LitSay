@@ -1,18 +1,24 @@
 <template>
   <div class="home">
-    <img alt="Vue logo" src="../assets/logo.png" />
-    <HelloWorld msg="Welcome to Your Vue.js + TypeScript App" />
+    <FileList />
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import HelloWorld from "@/components/HelloWorld.vue"; // @ is an alias to /src
+import FileList from "@/components/FileList.vue";
 
 export default defineComponent({
   name: "HomeView",
   components: {
-    HelloWorld,
+    FileList,
   },
 });
 </script>
+
+<style scoped>
+.home {
+  width: 100%;
+  height: 100%;
+}
+</style>
