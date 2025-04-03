@@ -4,7 +4,7 @@
     <header class="app-header">
       <div class="header-left">
         <img src="@/assets/logo.png" alt="Drive Logo" class="logo" />
-        <span class="logo-text">Drive</span>
+        <span class="logo-text">文献管理</span>
       </div>
       <div class="header-center">
         <el-input
@@ -44,32 +44,30 @@
           </el-button>
         </div>
 
-        <el-menu default-active="1" class="sidebar-menu">
-          <el-menu-item index="1">
-            <el-icon><HomeFilled /></el-icon>
-            <span>Home</span>
-          </el-menu-item>
-          <el-menu-item index="2">
-            <el-icon><Document /></el-icon>
-            <span>My Drive</span>
-          </el-menu-item>
-          <el-menu-item index="3">
-            <el-icon><Monitor /></el-icon>
-            <span>Computers</span>
-          </el-menu-item>
-          <el-menu-item index="4">
-            <el-icon><Share /></el-icon>
-            <span>Shared with me</span>
-          </el-menu-item>
-          <el-menu-item index="5">
-            <el-icon><Clock /></el-icon>
-            <span>Recent</span>
-          </el-menu-item>
-          <el-menu-item index="6">
-            <el-icon><Star /></el-icon>
-            <span>Starred</span>
-          </el-menu-item>
-        </el-menu>
+        <!-- 文件夹树形导航 -->
+        <FolderTree class="folder-tree" />
+
+        <!-- 快捷导航菜单 -->
+        <div class="quick-links">
+          <el-menu default-active="1" class="sidebar-menu">
+            <el-menu-item index="3">
+              <el-icon><Monitor /></el-icon>
+              <span>Computers</span>
+            </el-menu-item>
+            <el-menu-item index="4">
+              <el-icon><Share /></el-icon>
+              <span>Shared with me</span>
+            </el-menu-item>
+            <el-menu-item index="5">
+              <el-icon><Clock /></el-icon>
+              <span>Recent</span>
+            </el-menu-item>
+            <el-menu-item index="6">
+              <el-icon><Star /></el-icon>
+              <span>Starred</span>
+            </el-menu-item>
+          </el-menu>
+        </div>
       </aside>
 
       <!-- 内容区域 -->
@@ -94,6 +92,7 @@ import {
   Clock,
   Star,
 } from "@element-plus/icons-vue";
+import FolderTree from "@/components/FolderTree.vue";
 
 export default defineComponent({
   name: "AppLayout",
@@ -102,12 +101,13 @@ export default defineComponent({
     Setting,
     Grid,
     Plus,
-    HomeFilled,
-    Document,
+    // HomeFilled,
+    // Document,
     Monitor,
     Share,
     Clock,
     Star,
+    FolderTree,
   },
   setup() {
     const searchQuery = ref("");
@@ -202,6 +202,15 @@ export default defineComponent({
 
 .sidebar-menu {
   border-right: none;
+}
+
+.folder-tree {
+  margin-bottom: 16px;
+}
+
+.quick-links {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 8px;
 }
 
 .app-content {
