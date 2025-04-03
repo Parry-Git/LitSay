@@ -38,7 +38,7 @@
       <!-- 侧边栏导航 -->
       <aside class="app-sidebar">
         <div class="new-button-container">
-          <el-button type="primary" class="new-button">
+          <el-button type="primary" class="new-button" @click="goToUpload">
             <el-icon><Plus /></el-icon>
             New
           </el-button>
@@ -80,6 +80,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import {
   Search,
   Setting,
@@ -92,7 +93,13 @@ import {
 } from "@element-plus/icons-vue";
 import FolderTree from "@/components/FolderTree.vue";
 
+const router = useRouter();
 const searchQuery = ref("");
+
+// 添加导航到上传页面的方法
+const goToUpload = () => {
+  router.push("/upload");
+};
 </script>
 
 <style scoped>

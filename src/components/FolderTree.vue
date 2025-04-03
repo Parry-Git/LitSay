@@ -25,7 +25,10 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { Folder, FolderOpened, Document } from "@element-plus/icons-vue";
+
+const router = useRouter();
 
 const folderData = ref([
   {
@@ -35,7 +38,7 @@ const folderData = ref([
   },
   {
     id: 2,
-    label: "My Drive",
+    label: "My Library",
     icon: "folder",
     children: [
       {
@@ -99,6 +102,13 @@ const defaultProps = {
 
 const handleNodeClick = (data: any) => {
   console.log(data);
+
+  // 检测点击的是否为Home节点
+  if (data.id === 1 && data.label === "Home") {
+    // 导航到home路由
+    router.push("/");
+  }
+
   // 这里可以添加点击文件夹时的逻辑，例如加载文件列表等
 };
 </script>
