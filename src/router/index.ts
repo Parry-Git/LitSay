@@ -22,6 +22,31 @@ const routes: Array<RouteRecordRaw> = [
     component: () =>
       import(/* webpackChunkName: "upload" */ "../views/UploadView.vue"),
   },
+  // 添加新的文件夹内容路由
+  {
+    path: "/folder/:id",
+    name: "folder-content",
+    component: () =>
+      import(/* webpackChunkName: "folder" */ "../views/FolderContentView.vue"),
+  },
+  // 文档详情页面路由
+  {
+    path: "/document/:id",
+    name: "document-detail",
+    component: () =>
+      import(
+        /* webpackChunkName: "document" */ "../views/DocumentDetailView.vue"
+      ),
+  },
+  // 文档编辑页面路由
+  {
+    path: "/document/:id/edit",
+    name: "document-edit",
+    component: () =>
+      import(
+        /* webpackChunkName: "document-edit" */ "../views/DocumentEditView.vue"
+      ),
+  },
 ];
 
 const router = createRouter({

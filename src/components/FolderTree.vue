@@ -107,9 +107,10 @@ const handleNodeClick = (data: any) => {
   if (data.id === 1 && data.label === "Home") {
     // 导航到home路由
     router.push("/");
+  } else {
+    // 对于其他文件夹节点，导航到文件夹内容页面
+    router.push(`/folder/${data.id}`);
   }
-
-  // 这里可以添加点击文件夹时的逻辑，例如加载文件列表等
 };
 </script>
 
