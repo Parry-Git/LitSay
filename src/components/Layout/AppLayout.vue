@@ -20,7 +20,122 @@
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
+          <template #suffix>
+            <el-popover
+              placement="bottom-end"
+              :width="400"
+              trigger="click"
+              v-model:visible="showAdvancedSearch"
+              popper-class="advanced-search-popover"
+              @show="handlePopoverShow"
+              @hide="handlePopoverHide"
+            >
+              <template #reference>
+                <el-button
+                  class="advanced-search-button"
+                  type="text"
+                  :icon="Filter"
+                  circle
+                  @click.stop
+                ></el-button>
+              </template>
+
+              <!-- 高级搜索表单 -->
+              <template #default>
+                <div class="advanced-search-form">
+                  <h3 class="advanced-search-title">高级搜索</h3>
+
+                  <el-form
+                    :model="advancedSearchForm"
+                    label-position="top"
+                    size="small"
+                  >
+                    <!-- 按关键字搜索字段 -->
+                    <el-form-item label="关键字类型">
+                      <el-checkbox-group
+                        v-model="advancedSearchForm.searchFields"
+                      >
+                        <el-checkbox label="title">标题</el-checkbox>
+                        <el-checkbox label="author">作者</el-checkbox>
+                        <el-checkbox label="doi">DOI号</el-checkbox>
+                        <el-checkbox label="affiliation">作者单位</el-checkbox>
+                        <el-checkbox label="conference">会议名</el-checkbox>
+                      </el-checkbox-group>
+                    </el-form-item>
+
+                    <!-- 发布时间范围 -->
+                    <el-form-item label="发布时间范围">
+                      <el-date-picker
+                        v-model="advancedSearchForm.dateRange"
+                        type="daterange"
+                        range-separator="至"
+                        start-placeholder="开始日期"
+                        end-placeholder="结束日期"
+                        format="YYYY-MM-DD"
+                        value-format="YYYY-MM-DD"
+                        style="width: 100%"
+                      />
+                    </el-form-item>
+
+                    <!-- 文件类型 -->
+                    <el-form-item label="文献类型">
+                      <el-select
+                        v-model="advancedSearchForm.documentType"
+                        placeholder="选择文献类型"
+                        style="width: 100%"
+                        clearable
+                      >
+                        <el-option label="论文" value="paper" />
+                        <el-option label="期刊" value="journal" />
+                        <el-option label="会议报告" value="conference" />
+                        <el-option label="书籍" value="book" />
+                        <el-option label="其他" value="other" />
+                      </el-select>
+                    </el-form-item>
+
+                    <!-- 作者数量 -->
+                    <el-form-item label="作者数量">
+                      <el-select
+                        v-model="advancedSearchForm.authorCount"
+                        placeholder="作者数量"
+                        style="width: 100%"
+                        clearable
+                      >
+                        <el-option label="单作者" value="single" />
+                        <el-option label="2-3名作者" value="few" />
+                        <el-option label="4名以上作者" value="many" />
+                      </el-select>
+                    </el-form-item>
+
+                    <!-- 上传时间范围 -->
+                    <el-form-item label="上传时间范围">
+                      <el-select
+                        v-model="advancedSearchForm.uploadTime"
+                        placeholder="选择上传时间"
+                        style="width: 100%"
+                        clearable
+                      >
+                        <el-option label="最近一周" value="lastWeek" />
+                        <el-option label="最近一个月" value="lastMonth" />
+                        <el-option label="最近三个月" value="lastThreeMonths" />
+                        <el-option label="最近半年" value="lastSixMonths" />
+                        <el-option label="最近一年" value="lastYear" />
+                      </el-select>
+                    </el-form-item>
+
+                    <div class="form-actions">
+                      <el-button @click="resetAdvancedSearch">重置</el-button>
+                      <el-button type="primary" @click="performAdvancedSearch"
+                        >搜索</el-button
+                      >
+                    </div>
+                  </el-form>
+                </div>
+              </template>
+            </el-popover>
+          </template>
         </el-input>
+
         <!-- 搜索结果浮层 -->
         <div v-show="showSearchResults && searchQuery" class="search-results">
           <div v-if="searching" class="search-loading">
@@ -143,6 +258,7 @@ import {
   Folder,
   Document,
   Loading,
+  Filter,
 } from "@element-plus/icons-vue";
 import FolderTree from "@/components/FolderTree.vue";
 import { searchLibrary } from "@/api/load";
@@ -163,6 +279,15 @@ interface SearchResult {
   path?: string;
 }
 
+// 定义高级搜索表单类型
+interface AdvancedSearchForm {
+  searchFields: string[];
+  dateRange: [string, string] | null;
+  documentType: string | null;
+  authorCount: string | null;
+  uploadTime: string | null;
+}
+
 const router = useRouter();
 const searchQuery = ref("");
 const searching = ref(false);
@@ -170,12 +295,21 @@ const searchResults = ref<SearchResult[]>([]);
 const showSearchResults = ref(false);
 let hideResultsTimeout: number | null = null;
 
+// 高级搜索相关
+const showAdvancedSearch = ref(false);
+const advancedSearchForm = ref<AdvancedSearchForm>({
+  searchFields: ["title", "author", "doi"],
+  dateRange: null,
+  documentType: null,
+  authorCount: null,
+  uploadTime: null,
+});
+
 // 添加导航到上传页面的方法
 const goToUpload = () => {
   router.push("/upload");
 };
 
-// 删除实时搜索功能，仅保留回车键搜索
 // 处理回车键搜索
 const handleSearch = async () => {
   if (searchQuery.value.trim()) {
@@ -208,6 +342,50 @@ const performSearch = async () => {
   } finally {
     searching.value = false;
   }
+};
+
+// 执行高级搜索
+const performAdvancedSearch = () => {
+  // 构建高级搜索查询参数
+  const advancedParams = {
+    q: searchQuery.value,
+    fields: advancedSearchForm.value.searchFields.join(","),
+    dateFrom: advancedSearchForm.value.dateRange?.[0] || "",
+    dateTo: advancedSearchForm.value.dateRange?.[1] || "",
+    type: advancedSearchForm.value.documentType || "",
+    authors: advancedSearchForm.value.authorCount || "",
+    uploadTime: advancedSearchForm.value.uploadTime || "",
+  };
+
+  // 跳转到搜索结果页面，带上高级搜索参数
+  router.push({
+    path: "/search",
+    query: advancedParams,
+  });
+
+  showAdvancedSearch.value = false;
+};
+
+// 重置高级搜索表单
+const resetAdvancedSearch = () => {
+  advancedSearchForm.value = {
+    searchFields: ["title", "author", "doi"],
+    dateRange: null,
+    documentType: null,
+    authorCount: null,
+    uploadTime: null,
+  };
+};
+
+// 处理Popover显示
+const handlePopoverShow = () => {
+  // 显示高级搜索时，防止搜索结果浮层显示
+  showSearchResults.value = false;
+};
+
+// 处理Popover隐藏
+const handlePopoverHide = () => {
+  // 可以添加一些额外的逻辑
 };
 
 // 导航到结果
@@ -456,5 +634,39 @@ onUnmounted(() => {
 .el-menu-item {
   height: 40px;
   line-height: 40px;
+}
+
+/* 高级搜索按钮样式 */
+.advanced-search-button {
+  margin-left: 5px;
+  color: #606266;
+}
+
+.advanced-search-button:hover {
+  color: #409eff;
+}
+
+/* 高级搜索表单样式 */
+.advanced-search-form {
+  padding: 0 10px;
+}
+
+.advanced-search-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+:deep(.advanced-search-popover) {
+  padding: 20px 0;
 }
 </style>

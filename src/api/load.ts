@@ -173,11 +173,42 @@ export const downloadDocument = async (documentId: string | number) => {
 /**
  * 全局搜索文档和文件夹
  * @param keyword 搜索关键词
+ * @param advancedParams 高级搜索参数 (可选)
  */
-export const searchLibrary = async (keyword: string) => {
+export const searchLibrary = async (
+  keyword: string,
+  advancedParams?: {
+    fields?: string[];
+    dateFrom?: string;
+    dateTo?: string;
+    type?: string;
+    authors?: string;
+    uploadTime?: string;
+    [key: string]: any;
+  }
+) => {
+  const params: any = { keyword };
+
+  // 添加高级搜索参数
+  if (advancedParams) {
+    Object.keys(advancedParams).forEach((key) => {
+      const value = advancedParams[key];
+
+      // 只添加非空值
+      if (
+        value &&
+        (typeof value !== "object" ||
+          (Array.isArray(value) && value.length > 0))
+      ) {
+        // 如果是数组，转换为逗号分隔的字符串
+        params[key] = Array.isArray(value) ? value.join(",") : value;
+      }
+    });
+  }
+
   return await myAxios.request({
     url: `/api/search`,
     method: "GET",
-    params: { keyword },
+    params: params,
   });
 };
