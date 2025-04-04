@@ -1,6 +1,6 @@
 <template>
   <div class="upload">
-    <h1>PDF文件批量上传</h1>
+    <!-- <h1>PDF文件批量上传</h1> -->
     <div class="upload-container">
       <div
         class="upload-area"
@@ -72,17 +72,28 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue";
-import axios from "axios";
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import { ElMessage } from "element-plus";
+import { uploadPdfFiles } from "@/api/load";
 
+const route = useRoute();
 const fileInput = ref<HTMLInputElement | null>(null);
 const selectedFiles = ref<File[]>([]);
 const uploading = ref(false);
+const targetFolderId = ref<string | undefined>(undefined);
 const uploadResult = ref<{
   success: boolean;
   message: string;
   files?: string[];
 } | null>(null);
+
+// 当组件挂载时，检查URL参数以获取目标文件夹ID
+onMounted(() => {
+  if (route.query.folderId) {
+    targetFolderId.value = route.query.folderId as string;
+  }
+});
 
 const triggerFileInput = () => {
   fileInput.value?.click();
@@ -127,6 +138,7 @@ const formatFileSize = (bytes: number): string => {
 
 const uploadFiles = async () => {
   if (selectedFiles.value.length === 0) {
+    ElMessage.warning("请先选择文件");
     uploadResult.value = {
       success: false,
       message: "请先选择文件",
@@ -138,21 +150,12 @@ const uploadFiles = async () => {
   uploadResult.value = null;
 
   try {
-    const formData = new FormData();
-    selectedFiles.value.forEach((file) => {
-      formData.append("pdfs", file);
-    });
-
-    const response = await axios.post(
-      "http://localhost:5000/upload-pdfs",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+    const response = await uploadPdfFiles(
+      selectedFiles.value,
+      targetFolderId.value
     );
 
+    ElMessage.success("文件上传成功");
     uploadResult.value = {
       success: true,
       message: response.data.message,
@@ -161,11 +164,13 @@ const uploadFiles = async () => {
 
     // 上传成功后清空文件列表
     clearFiles();
-  } catch (error) {
+  } catch (error: any) {
     let message = "上传失败";
-    if (axios.isAxiosError(error) && error.response) {
+    if (error.response) {
       message = error.response.data.message || message;
     }
+
+    ElMessage.warning(message);
     uploadResult.value = {
       success: false,
       message,

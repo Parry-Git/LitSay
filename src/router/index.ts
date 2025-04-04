@@ -47,6 +47,13 @@ const routes: Array<RouteRecordRaw> = [
         /* webpackChunkName: "document-edit" */ "../views/DocumentEditView.vue"
       ),
   },
+  // 添加搜索结果页面路由
+  {
+    path: "/search",
+    name: "search-results",
+    component: () =>
+      import(/* webpackChunkName: "search" */ "../views/SearchResultView.vue"),
+  },
 ];
 
 const router = createRouter({

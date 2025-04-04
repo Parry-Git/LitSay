@@ -152,7 +152,22 @@ const currentFolderId = ref<string | number>(
   typeof route.params.id === "string" ? route.params.id : "root"
 );
 const currentFolder = ref<any>({});
-const folderContents = ref<any[]>([]);
+// const folderContents = ref<any[]>([]);
+const folderContents = ref<any>([
+  {
+    id: 1,
+    name: "示例文件夹",
+    type: "folder",
+    createTime: "2025-04-01 10:00:00",
+  },
+  {
+    id: 2,
+    name: "示例文档",
+    type: "document",
+    createTime: "2025-04-02 14:30:00",
+    info: "这是一个示例文档的描述信息",
+  },
+]);
 
 // 对话框相关状态
 const renameDialogVisible = ref(false);

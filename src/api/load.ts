@@ -125,3 +125,59 @@ export const uploadDocumentFile = async (
     },
   });
 };
+
+/**
+ * 批量上传PDF文件
+ * @param files 要上传的PDF文件数组
+ * @param folderId 可选的目标文件夹ID
+ */
+export const uploadPdfFiles = async (
+  files: File[],
+  folderId?: string | number
+) => {
+  const formData = new FormData();
+
+  // 添加所有PDF文件到表单
+  files.forEach((file) => {
+    formData.append("pdfs", file);
+  });
+
+  // 如果提供了文件夹ID，添加到表单
+  if (folderId) {
+    formData.append("folderId", folderId.toString());
+  }
+
+  // 使用原始 axios 以便与后端接口保持兼容
+  return await myAxios.request({
+    url: `/api/upload-files`, // 保持原始URL
+    method: "POST",
+    data: formData,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+/**
+ * 下载文献文件
+ * @param documentId 文献ID
+ */
+export const downloadDocument = async (documentId: string | number) => {
+  return await myAxios.request({
+    url: `/api/document/${documentId}/download`,
+    method: "GET",
+    responseType: "blob",
+  });
+};
+
+/**
+ * 全局搜索文档和文件夹
+ * @param keyword 搜索关键词
+ */
+export const searchLibrary = async (keyword: string) => {
+  return await myAxios.request({
+    url: `/api/search`,
+    method: "GET",
+    params: { keyword },
+  });
+};
