@@ -71,6 +71,87 @@ export const folderData = [
   },
 ];
 
+// 文件夹信息数据 - 按文件夹ID组织
+export const folderInfo = {
+  "1": {
+    id: 1,
+    name: "Home",
+    label: "首页",
+    parentId: null,
+    path: "/",
+  },
+  "2": {
+    id: 2,
+    name: "我的文献库",
+    label: "我的文献库",
+    parentId: null,
+    path: "/我的文献库",
+  },
+  "21": {
+    id: 21,
+    name: "计算机科学",
+    label: "计算机科学",
+    parentId: 2,
+    path: "/我的文献库/计算机科学",
+  },
+  "211": {
+    id: 211,
+    name: "人工智能",
+    label: "人工智能",
+    parentId: 21,
+    path: "/我的文献库/计算机科学/人工智能",
+  },
+  "2111": {
+    id: 2111,
+    name: "机器学习",
+    label: "机器学习",
+    parentId: 211,
+    path: "/我的文献库/计算机科学/人工智能/机器学习",
+  },
+  "2112": {
+    id: 2112,
+    name: "深度学习",
+    label: "深度学习",
+    parentId: 211,
+    path: "/我的文献库/计算机科学/人工智能/深度学习",
+  },
+  "212": {
+    id: 212,
+    name: "软件工程",
+    label: "软件工程",
+    parentId: 21,
+    path: "/我的文献库/计算机科学/软件工程",
+  },
+  "22": {
+    id: 22,
+    name: "物理学",
+    label: "物理学",
+    parentId: 2,
+    path: "/我的文献库/物理学",
+  },
+  "221": {
+    id: 221,
+    name: "量子物理",
+    label: "量子物理",
+    parentId: 22,
+    path: "/我的文献库/物理学/量子物理",
+  },
+  "23": {
+    id: 23,
+    name: "数学",
+    label: "数学",
+    parentId: 2,
+    path: "/我的文献库/数学",
+  },
+  "3": {
+    id: 3,
+    name: "共享文献",
+    label: "共享文献",
+    parentId: null,
+    path: "/共享文献",
+  },
+};
+
 // 文件夹内容数据 - 按文件夹ID组织
 export const folderContents = {
   // 根文件夹
@@ -132,7 +213,7 @@ export const folderContents = {
     },
     {
       id: 2101,
-      name: "计算机科学导论.pdf",
+      name: "计算机科学导论",
       type: "document",
       createTime: "2023-09-01",
       info: "基础教材，作者：John Smith",
@@ -158,38 +239,46 @@ export const folderContents = {
     },
     {
       id: 21101,
-      name: "人工智能：现代方法.pdf",
+      name: "人工智能：现代方法",
       type: "document",
       createTime: "2023-09-05",
       info: "经典教材，作者：Stuart Russell, Peter Norvig",
-      fileSize: "12.8 MB",
-      fileType: "PDF",
     },
   ],
   // 机器学习
   "2111": [
     {
       id: 211101,
-      name: "机器学习算法综述.pdf",
+      name: "机器学习算法综述",
       type: "document",
       createTime: "2023-09-10",
       info: "综述论文，作者：李明，张华",
-      fileSize: "3.5 MB",
-      fileType: "PDF",
     },
     {
       id: 211102,
-      name: "支持向量机原理与应用.pdf",
+      name: "支持向量机原理与应用",
       type: "document",
       createTime: "2023-09-12",
       info: "学术论文，作者：王刚",
-      fileSize: "2.1 MB",
-      fileType: "PDF",
     },
   ],
 };
 
 // 获取特定文件夹内容的函数
 export const getFolderContents = (folderId: string | number) => {
-  return folderContents[folderId as keyof typeof folderContents] || [];
+  // 获取文件夹信息
+  const currentFolder = folderInfo[folderId as keyof typeof folderInfo] || {
+    id: folderId,
+    name: `文件夹 ${folderId}`,
+    label: `文件夹 ${folderId}`,
+  };
+
+  // 获取文件夹内容
+  const items = folderContents[folderId as keyof typeof folderContents] || [];
+
+  // 返回包含当前文件夹信息和内容的对象
+  return {
+    currentFolder,
+    items,
+  };
 };

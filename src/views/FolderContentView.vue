@@ -1,138 +1,168 @@
 <template>
   <div class="folder-content-view">
-    <div class="folder-header">
-      <h2>{{ currentFolder.label || "内容列表" }}</h2>
-      <div class="folder-actions">
-        <el-button type="primary" size="small" @click="handleAddFolder">
-          <el-icon><FolderAdd /></el-icon>
-          新建文件夹
-        </el-button>
-        <el-button type="success" size="small" @click="handleUpload">
-          <el-icon><Upload /></el-icon>
-          上传文献
-        </el-button>
-      </div>
-    </div>
+    <a-page-header
+      class="folder-header"
+      :title="getFolderDisplayName()"
+      :sub-title="currentFolder.path || ''"
+      @back="goBack"
+    >
+      <template #extra>
+        <a-space>
+          <a-button type="primary" @click="handleAddFolder">
+            <template #icon><folder-add-outlined /></template>
+            新建文件夹
+          </a-button>
+          <a-button type="primary" @click="handleUpload">
+            <template #icon><upload-outlined /></template>
+            上传文献
+          </a-button>
+        </a-space>
+      </template>
+    </a-page-header>
 
-    <el-divider />
+    <a-divider style="margin: 12px 0" />
 
-    <div v-if="loading" class="loading-container">
-      <el-skeleton :rows="5" animated />
-    </div>
+    <div class="folder-content">
+      <a-spin :spinning="loading" tip="加载中...">
+        <a-empty
+          v-if="!loading && folderContents.length === 0"
+          description="此文件夹为空"
+        />
 
-    <div v-else>
-      <div v-if="folderContents.length === 0" class="empty-folder">
-        <el-empty description="此文件夹为空" />
-      </div>
-      <el-table
-        v-else
-        :data="folderContents"
-        style="width: 100%"
-        @row-click="handleItemClick"
-      >
-        <el-table-column width="60">
-          <template #default="{ row }">
-            <el-icon :size="24" class="content-icon">
-              <Folder v-if="row.type === 'folder'" />
-              <Document v-else />
-            </el-icon>
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="name" label="名称">
-          <template #default="{ row }">
-            <span
-              class="item-name"
-              :class="{ 'is-folder': row.type === 'folder' }"
-            >
-              {{ row.name }}
-            </span>
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="createTime" label="创建时间" width="180" />
-
-        <el-table-column prop="info" label="信息" width="300">
-          <template #default="{ row }">
-            <span v-if="row.type === 'document' && row.info">
-              {{ row.info }}
-            </span>
-            <span v-else>—</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column width="120">
-          <template #default="{ row }">
-            <el-dropdown
-              trigger="click"
-              @command="(cmd: CommandType) => handleCommand(cmd, row)"
-            >
-              <el-button type="text">
-                <el-icon><MoreFilled /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="rename">重命名</el-dropdown-item>
-                  <el-dropdown-item
-                    v-if="row.type === 'document'"
-                    command="download"
-                    >下载</el-dropdown-item
+        <a-table
+          v-else
+          :dataSource="folderContents"
+          :columns="columns"
+          :pagination="false"
+          :rowKey="(record) => record.id"
+          :row-class-name="() => 'folder-row'"
+        >
+          <!-- 自定义图标和名称列 -->
+          <template #bodyCell="{ column, record }">
+            <!-- 图标+名称列 -->
+            <template v-if="column.dataIndex === 'name'">
+              <div class="item-name-cell" @click="handleItemClick(record)">
+                <a-space>
+                  <folder-outlined
+                    v-if="record.type === 'folder'"
+                    class="folder-icon"
+                  />
+                  <file-pdf-outlined v-else class="document-icon" />
+                  <span
+                    class="item-name"
+                    :class="{ 'is-folder': record.type === 'folder' }"
                   >
-                  <el-dropdown-item
-                    v-if="row.type === 'document'"
-                    command="metadata"
-                    >编辑元数据</el-dropdown-item
-                  >
-                  <el-dropdown-item command="delete" divided type="danger"
-                    >删除</el-dropdown-item
-                  >
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+                    {{ getItemDisplayName(record) }}
+                  </span>
+                </a-space>
+              </div>
+            </template>
+
+            <!-- 操作列 -->
+            <template v-if="column.dataIndex === 'actions'">
+              <a-dropdown :trigger="['click']" @click.stop>
+                <a class="ant-dropdown-link" @click.stop>
+                  <more-outlined />
+                </a>
+                <template #overlay>
+                  <a-menu @click="({ key }) => handleMenuClick(key, record)">
+                    <a-menu-item key="rename">
+                      <edit-outlined /> 重命名
+                    </a-menu-item>
+                    <a-menu-item
+                      v-if="record.type === 'document'"
+                      key="download"
+                    >
+                      <download-outlined /> 下载
+                    </a-menu-item>
+                    <a-menu-item
+                      v-if="record.type === 'document'"
+                      key="metadata"
+                    >
+                      <setting-outlined /> 编辑元数据
+                    </a-menu-item>
+                    <a-menu-divider />
+                    <a-menu-item key="delete" danger>
+                      <delete-outlined /> 删除
+                    </a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </template>
           </template>
-        </el-table-column>
-      </el-table>
+        </a-table>
+      </a-spin>
     </div>
 
     <!-- 重命名对话框 -->
-    <el-dialog v-model="renameDialogVisible" title="重命名" width="30%">
-      <el-form :model="renameForm">
-        <el-form-item label="名称">
-          <el-input v-model="renameForm.newName" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="renameDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmRename">确认</el-button>
-      </template>
-    </el-dialog>
+    <a-modal
+      v-model:visible="renameDialogVisible"
+      title="重命名"
+      @ok="confirmRename"
+      :okButtonProps="{ loading: processing }"
+    >
+      <a-form :model="renameForm">
+        <a-form-item
+          label="新名称"
+          :rules="[{ required: true, message: '请输入名称' }]"
+        >
+          <a-input
+            v-model:value="renameForm.newName"
+            placeholder="请输入新名称"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
 
     <!-- 新建文件夹对话框 -->
-    <el-dialog v-model="newFolderDialogVisible" title="新建文件夹" width="30%">
-      <el-form :model="newFolderForm">
-        <el-form-item label="名称">
-          <el-input v-model="newFolderForm.name" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="newFolderDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmCreateFolder">确认</el-button>
-      </template>
-    </el-dialog>
+    <a-modal
+      v-model:visible="newFolderDialogVisible"
+      title="新建文件夹"
+      @ok="confirmCreateFolder"
+      :okButtonProps="{ loading: processing }"
+    >
+      <a-form :model="newFolderForm">
+        <a-form-item
+          label="文件夹名称"
+          :rules="[{ required: true, message: '请输入文件夹名称' }]"
+        >
+          <a-input
+            v-model:value="newFolderForm.name"
+            placeholder="请输入文件夹名称"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 删除确认对话框 -->
+    <a-modal
+      v-model:visible="deleteDialogVisible"
+      title="确认删除"
+      @ok="confirmDeleteItem"
+      :okButtonProps="{ loading: processing, danger: true }"
+      okText="删除"
+      cancelText="取消"
+    >
+      <p>确定要删除"{{ deleteItemName }}"吗？此操作不可撤销。</p>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { message } from "ant-design-vue";
 import {
-  Folder,
-  Document,
-  FolderAdd,
-  Upload,
-  MoreFilled,
-} from "@element-plus/icons-vue";
+  FolderOutlined,
+  FilePdfOutlined,
+  FolderAddOutlined,
+  UploadOutlined,
+  EditOutlined,
+  DownloadOutlined,
+  SettingOutlined,
+  DeleteOutlined,
+  MoreOutlined,
+} from "@ant-design/icons-vue";
 import {
   getFolderContents,
   createFolder,
@@ -141,13 +171,34 @@ import {
   deleteDocument,
 } from "@/api/load";
 
-// 定义命令类型
-type CommandType = "rename" | "download" | "metadata" | "delete";
+// 定义表格列
+const columns = [
+  {
+    title: "名称",
+    dataIndex: "name",
+    key: "name",
+    ellipsis: true,
+  },
+  {
+    title: "创建时间",
+    dataIndex: "createTime",
+    key: "createTime",
+    width: 250,
+  },
+  {
+    title: "操作",
+    dataIndex: "actions",
+    key: "actions",
+    width: 80,
+    align: "center",
+  },
+];
 
 // 路由和数据初始化
 const route = useRoute();
 const router = useRouter();
 const loading = ref(true);
+const processing = ref(false);
 const currentFolderId = ref<string | number>(
   typeof route.params.id === "string" ? route.params.id : "root"
 );
@@ -157,69 +208,108 @@ const folderContents = ref<any[]>([]);
 // 对话框相关状态
 const renameDialogVisible = ref(false);
 const newFolderDialogVisible = ref(false);
-const renameForm = ref({ id: "", type: "", newName: "" });
-const newFolderForm = ref({ name: "" });
+const deleteDialogVisible = ref(false);
+const renameForm = reactive({ id: "", type: "", newName: "" });
+const newFolderForm = reactive({ name: "" });
+const deleteItemName = ref("");
+const deleteItemInfo = reactive({ id: "", type: "" });
 
-// 获取当前文件夹内容
+// 获取文件/文件夹显示名称
+const getItemDisplayName = (item: any): string => {
+  return (
+    item.name ||
+    item.label ||
+    `未命名${item.type === "folder" ? "文件夹" : "文献"}`
+  );
+};
+
+// 获取当前文件夹显示名称 - 修改为无参数方法
+const getFolderDisplayName = (): string => {
+  if (currentFolder.value) {
+    if (currentFolder.value.name || currentFolder.value.label) {
+      return currentFolder.value.name || currentFolder.value.label;
+    }
+  }
+
+  // 为一些常见ID提供默认名称
+  const id = currentFolderId.value;
+  if (id === 1 || id === "1") return "首页";
+  if (id === 2 || id === "2") return "我的文献库";
+  if (id === "root") return "根目录";
+
+  return `文件夹 ${id}`;
+};
+
+// 获取当前文件夹内容 - 修改为处理新的数据结构
 const fetchFolderContents = async () => {
   loading.value = true;
   try {
     const response = await getFolderContents(currentFolderId.value);
-
-    // 检查返回数据结构
     console.log("Folder contents response:", response);
 
-    // 根据返回结构提取数据
+    // 处理不同的响应数据结构
     if (response && response.data && response.data.data) {
-      // 如果是嵌套的data结构
-      if (Array.isArray(response.data.data)) {
-        folderContents.value = response.data.data;
-        currentFolder.value = {
-          id: currentFolderId.value,
-          label: getCurrentFolderName(currentFolderId.value),
-        };
-      } else if (response.data.data.items) {
-        // 如果返回了独立的currentFolder和items字段
-        currentFolder.value = response.data.data.currentFolder || {};
-        folderContents.value = response.data.data.items || [];
+      // 标准API响应
+      const data = response.data.data;
+
+      if (data.currentFolder && data.items) {
+        // 新结构: 包含currentFolder和items字段
+        currentFolder.value = data.currentFolder;
+        folderContents.value = data.items || [];
+      } else if (Array.isArray(data)) {
+        // 兼容旧结构: 直接是数组
+        folderContents.value = data;
+        currentFolder.value = { id: currentFolderId.value };
+      } else if (typeof data === "object") {
+        // 可能是其他结构
+        if (Array.isArray(data.items)) {
+          folderContents.value = data.items;
+          currentFolder.value = data.currentFolder || {
+            id: currentFolderId.value,
+          };
+        } else {
+          folderContents.value = Array.isArray(data) ? data : [];
+          currentFolder.value = { id: currentFolderId.value };
+        }
       } else {
-        folderContents.value = response.data.data;
+        folderContents.value = [];
+        currentFolder.value = { id: currentFolderId.value };
       }
+    } else if (
+      response &&
+      response.currentFolder &&
+      Array.isArray(response.items)
+    ) {
+      // 直接返回了对象结构 {currentFolder, items}
+      currentFolder.value = response.currentFolder;
+      folderContents.value = response.items;
     } else if (Array.isArray(response)) {
-      // 如果直接返回了数组
+      // 直接返回了数组
       folderContents.value = response;
+      currentFolder.value = { id: currentFolderId.value };
     } else {
       folderContents.value = [];
+      currentFolder.value = { id: currentFolderId.value };
     }
 
-    // 如果currentFolder没有label字段，我们使用name字段或ID
-    if (
-      currentFolder.value &&
-      !currentFolder.value.label &&
-      currentFolder.value.name
-    ) {
-      currentFolder.value.label = currentFolder.value.name;
-    } else if (!currentFolder.value.label) {
-      currentFolder.value.label = getCurrentFolderName(currentFolderId.value);
-    }
+    // 确保每个项目都有合适的键用于展示
+    folderContents.value = folderContents.value.map((item) => ({
+      ...item,
+      key: item.id || `${item.type}-${Date.now()}-${Math.random()}`,
+    }));
   } catch (error) {
     console.error("获取文件夹内容失败", error);
-    ElMessage.error("获取文件夹内容失败");
+    message.error("获取文件夹内容失败");
     folderContents.value = [];
+    currentFolder.value = { id: currentFolderId.value };
   } finally {
     loading.value = false;
   }
 };
 
-// 根据ID获取文件夹名称
-const getCurrentFolderName = (id: string | number): string => {
-  // 为一些常见ID提供默认名称
-  if (id === 1 || id === "1") return "Home";
-  if (id === 2 || id === "2") return "我的文献库";
-  if (id === "root") return "根目录";
-
-  // 否则返回ID
-  return `文件夹 ${id}`;
+// 返回上级目录
+const goBack = () => {
+  router.back();
 };
 
 // 处理点击文件夹或文档事件
@@ -228,14 +318,14 @@ const handleItemClick = (row: any) => {
     // 导航到子文件夹
     router.push(`/folder/${row.id}`);
   } else {
-    // 对于文档，可以打开预览或详情页
+    // 对于文档，打开详情页
     router.push(`/document/${row.id}`);
   }
 };
 
-// 处理下拉菜单命令
-const handleCommand = (command: CommandType, row: any) => {
-  switch (command) {
+// 处理菜单点击
+const handleMenuClick = (key: string, row: any) => {
+  switch (key) {
     case "rename":
       openRenameDialog(row);
       break;
@@ -246,89 +336,103 @@ const handleCommand = (command: CommandType, row: any) => {
       router.push(`/document/${row.id}/edit`);
       break;
     case "delete":
-      confirmDelete(row);
+      openDeleteDialog(row);
       break;
   }
 };
 
 // 打开重命名对话框
 const openRenameDialog = (item: any) => {
-  renameForm.value = {
-    id: item.id,
-    type: item.type,
-    newName: item.name,
-  };
+  renameForm.id = item.id;
+  renameForm.type = item.type;
+  renameForm.newName = getItemDisplayName(item);
   renameDialogVisible.value = true;
 };
 
 // 确认重命名
 const confirmRename = async () => {
+  if (!renameForm.newName.trim()) {
+    message.warning("名称不能为空");
+    return;
+  }
+
+  processing.value = true;
   try {
-    if (renameForm.value.type === "folder") {
+    if (renameForm.type === "folder") {
       await renameFolder({
-        folderId: renameForm.value.id,
-        newName: renameForm.value.newName,
+        folderId: renameForm.id,
+        newName: renameForm.newName,
       });
     } else {
-      // 如果是文档，需要使用updateDocumentMetadata接口，这里简化处理
-      // await updateDocumentMetadata(renameForm.value.id, { title: renameForm.value.newName });
+      // 如果是文档，使用updateDocumentMetadata接口
+      // 实际实现时需要根据API调整
     }
-    ElMessage.success("重命名成功");
+    message.success("重命名成功");
     fetchFolderContents(); // 刷新内容
+    renameDialogVisible.value = false;
   } catch (error) {
     console.error("重命名失败", error);
-    ElMessage.error("重命名失败");
+    message.error("重命名失败");
   } finally {
-    renameDialogVisible.value = false;
+    processing.value = false;
   }
 };
 
-// 确认删除
-const confirmDelete = (item: any) => {
-  ElMessageBox.confirm(`确定要删除 ${item.name} 吗？`, "警告", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  })
-    .then(async () => {
-      try {
-        if (item.type === "folder") {
-          await deleteFolder(item.id);
-        } else {
-          await deleteDocument(item.id);
-        }
-        ElMessage.success("删除成功");
-        fetchFolderContents(); // 刷新内容
-      } catch (error) {
-        console.error("删除失败", error);
-        ElMessage.error("删除失败");
-      }
-    })
-    .catch(() => {
-      // 用户取消删除
-    });
+// 打开删除确认对话框
+const openDeleteDialog = (item: any) => {
+  deleteItemName.value = getItemDisplayName(item);
+  deleteItemInfo.id = item.id;
+  deleteItemInfo.type = item.type;
+  deleteDialogVisible.value = true;
+};
+
+// 确认删除项目
+const confirmDeleteItem = async () => {
+  processing.value = true;
+  try {
+    if (deleteItemInfo.type === "folder") {
+      await deleteFolder(deleteItemInfo.id);
+    } else {
+      await deleteDocument(deleteItemInfo.id);
+    }
+    message.success("删除成功");
+    fetchFolderContents(); // 刷新内容
+    deleteDialogVisible.value = false;
+  } catch (error) {
+    console.error("删除失败", error);
+    message.error("删除失败");
+  } finally {
+    processing.value = false;
+  }
 };
 
 // 处理添加文件夹
 const handleAddFolder = () => {
-  newFolderForm.value = { name: "" };
+  newFolderForm.name = "";
   newFolderDialogVisible.value = true;
 };
 
 // 确认创建文件夹
 const confirmCreateFolder = async () => {
+  if (!newFolderForm.name.trim()) {
+    message.warning("文件夹名称不能为空");
+    return;
+  }
+
+  processing.value = true;
   try {
     await createFolder({
       parentId: currentFolderId.value,
-      name: newFolderForm.value.name,
+      name: newFolderForm.name,
     });
-    ElMessage.success("文件夹创建成功");
+    message.success("文件夹创建成功");
     fetchFolderContents(); // 刷新内容
+    newFolderDialogVisible.value = false;
   } catch (error) {
     console.error("创建文件夹失败", error);
-    ElMessage.error("创建文件夹失败");
+    message.error("创建文件夹失败");
   } finally {
-    newFolderDialogVisible.value = false;
+    processing.value = false;
   }
 };
 
@@ -342,16 +446,15 @@ const handleUpload = () => {
 
 // 处理下载文档
 const downloadDocument = (documentId: string | number) => {
-  // 实现文档下载逻辑，可能需要调用后端接口
-  ElMessage.info("开始下载文档...");
+  // 文档下载逻辑
+  message.info("开始下载文档...");
 };
 
-// 监听路由参数变化，重新获取文件夹内容
+// 监听路由参数变化
 watch(
   () => route.params.id,
   (newId) => {
     if (newId) {
-      // 确保 newId 是字符串而不是字符串数组
       currentFolderId.value = Array.isArray(newId) ? newId[0] : newId;
       fetchFolderContents();
     }
@@ -366,45 +469,67 @@ onMounted(() => {
 
 <style scoped>
 .folder-content-view {
-  padding: 20px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px -2px rgba(0, 0, 0, 0.16),
+    0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09);
 }
 
 .folder-header {
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.folder-content {
+  margin-top: 16px;
+}
+
+/* 表格行样式 */
+:deep(.folder-row) {
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+:deep(.folder-row:hover) {
+  background-color: #f5f5f5;
+}
+
+.item-name-cell {
+  cursor: pointer;
+  padding: 8px 0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
 }
 
-.folder-actions {
-  display: flex;
-  gap: 10px;
+.folder-icon {
+  color: #1890ff;
+  font-size: 18px;
 }
 
-.loading-container {
-  padding: 20px 0;
-}
-
-.empty-folder {
-  display: flex;
-  justify-content: center;
-  padding: 40px 0;
-}
-
-.content-icon {
-  color: #4285f4;
+.document-icon {
+  color: #f56a00;
+  font-size: 18px;
 }
 
 .item-name {
-  font-weight: 500;
+  padding-left: 8px;
 }
 
 .item-name.is-folder {
-  color: #4285f4;
-  cursor: pointer;
+  color: #1890ff;
+  font-weight: 500;
 }
 
-.item-name.is-folder:hover {
-  text-decoration: underline;
+/* 覆盖ant下拉菜单的样式，确保事件不冲突 */
+:deep(.ant-dropdown-link) {
+  padding: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+:deep(.ant-dropdown-link:hover) {
+  background-color: rgba(0, 0, 0, 0.03);
 }
 </style>
