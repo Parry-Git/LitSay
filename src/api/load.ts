@@ -1,10 +1,37 @@
 import { myAxios } from "@/request";
+// 导入模拟数据
+import {
+  folderData,
+  getFolderContents as mockGetFolderContents,
+  documentData,
+  getDocumentDetails as mockGetDocumentDetails,
+  searchLibrary as mockSearchLibrary,
+} from "@/mock";
+
+// 是否使用模拟数据（开发环境下设为true）
+const USE_MOCK = process.env.NODE_ENV === "development";
 
 /**
  * 获取特定文件夹下包含的文件夹和具体文献
  * @param folderId 文件夹ID，如果是根目录可以传递特定值如"root"
  */
 export const getFolderContents = async (folderId: string | number) => {
+  // 使用模拟数据
+  if (USE_MOCK) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          data: {
+            code: 200,
+            message: "success",
+            data: mockGetFolderContents(folderId),
+          },
+        });
+      }, 300); // 模拟网络延迟
+    });
+  }
+
+  // 使用真实API
   return await myAxios.request({
     url: `/api/folder/${folderId}/contents`,
     method: "GET",
@@ -159,14 +186,29 @@ export const uploadPdfFiles = async (
 };
 
 /**
- * 下载文献文件
+ * 获取文献详情
  * @param documentId 文献ID
  */
-export const downloadDocument = async (documentId: string | number) => {
+export const getDocumentDetails = async (documentId: string | number) => {
+  // 使用模拟数据
+  if (USE_MOCK) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          data: {
+            code: 200,
+            message: "success",
+            data: mockGetDocumentDetails(documentId),
+          },
+        });
+      }, 300); // 模拟网络延迟
+    });
+  }
+
+  // 使用真实API
   return await myAxios.request({
-    url: `/api/document/${documentId}/download`,
+    url: `/api/document/${documentId}`,
     method: "GET",
-    responseType: "blob",
   });
 };
 
@@ -174,6 +216,7 @@ export const downloadDocument = async (documentId: string | number) => {
  * 全局搜索文档和文件夹
  * @param keyword 搜索关键词
  * @param advancedParams 高级搜索参数 (可选)
+ * @returns 返回搜索结果对象，包含data字段
  */
 export const searchLibrary = async (
   keyword: string,
@@ -186,7 +229,40 @@ export const searchLibrary = async (
     uploadTime?: string;
     [key: string]: any;
   }
-) => {
+): Promise<{
+  data: {
+    code: number;
+    message: string;
+    data: {
+      results: Array<{
+        id: string | number;
+        name: string;
+        type: "document" | "folder";
+        matchField?: string;
+        path?: string;
+        highlight?: string;
+      }>;
+    };
+  };
+}> => {
+  // 使用模拟数据
+  if (USE_MOCK) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const mockResults = mockSearchLibrary(keyword, advancedParams);
+        resolve({
+          data: {
+            code: 200,
+            message: "success",
+            data: {
+              results: mockResults,
+            },
+          },
+        });
+      }, 500); // 模拟网络延迟
+    });
+  }
+
   const params: any = { keyword };
 
   // 添加高级搜索参数
@@ -200,15 +276,14 @@ export const searchLibrary = async (
         (typeof value !== "object" ||
           (Array.isArray(value) && value.length > 0))
       ) {
-        // 如果是数组，转换为逗号分隔的字符串
-        params[key] = Array.isArray(value) ? value.join(",") : value;
+        params[key] = value;
       }
     });
   }
 
   return await myAxios.request({
-    url: `/api/search`,
+    url: "/api/search",
     method: "GET",
-    params: params,
+    params,
   });
 };

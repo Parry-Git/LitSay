@@ -40,7 +40,7 @@
             </div>
           </template>
           <div class="stats-content">
-            <div class="stats-number">{{ fileCount }}</div>
+            <div class="stats-number">{{ userStats.totalDocuments }}</div>
             <div class="stats-label">文件总数</div>
           </div>
         </el-card>
@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import {
   Document,
@@ -72,18 +72,18 @@ import {
   Plus,
   Files,
 } from "@element-plus/icons-vue";
+import { userStatsData } from "@/mock/userStatsData";
 
 const router = useRouter();
-// 模拟文件数量，实际项目中应该从API或状态管理中获取
-const fileCount = ref(12);
+// 使用模拟数据
+const userStats = ref(userStatsData);
 
 const goToUpload = () => {
   router.push("/upload");
 };
 
 const goToFiles = () => {
-  // 可以添加导航到文件列表的逻辑
-  // 或者滚动到当前页面的文件列表部分
+  router.push("/folder/2"); // 导航到我的文献库
 };
 </script>
 

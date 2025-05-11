@@ -269,13 +269,7 @@ interface SearchResult {
   id: string | number;
   name: string;
   type: "document" | "folder";
-  matchField?:
-    | "title"
-    | "author"
-    | "doi"
-    | "affiliation"
-    | "conference"
-    | "foldername";
+  matchField?: string; // 修改为接受任意字符串
   path?: string;
 }
 
@@ -333,7 +327,7 @@ const performSearch = async () => {
 
   try {
     const response = await searchLibrary(searchQuery.value);
-    searchResults.value = response.data.results || [];
+    searchResults.value = response.data.data?.results || [];
     showSearchResults.value = true; // 显示搜索结果
   } catch (error) {
     console.error("搜索失败", error);
@@ -629,44 +623,46 @@ onUnmounted(() => {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
-}
 
-.el-menu-item {
-  height: 40px;
-  line-height: 40px;
-}
+  .el-menu-item {
+    height: 40px;
+    line-height: 40px;
+  }
 
-/* 高级搜索按钮样式 */
-.advanced-search-button {
-  margin-left: 5px;
-  color: #606266;
-}
+  /* 高级搜索按钮样式 */
 
-.advanced-search-button:hover {
-  color: #409eff;
-}
+  .advanced-search-button {
+    margin-left: 5px;
+    color: #606266;
+  }
 
-/* 高级搜索表单样式 */
-.advanced-search-form {
-  padding: 0 10px;
-}
+  .advanced-search-button:hover {
+    color: #409eff;
+  }
 
-.advanced-search-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #303133;
-  margin: 0 0 20px 0;
-  text-align: center;
-}
+  /* 高级搜索表单样式 */
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  gap: 10px;
-}
+  .advanced-search-form {
+    padding: 0 10px;
+  }
 
-:deep(.advanced-search-popover) {
-  padding: 20px 0;
+  .advanced-search-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #303133;
+    margin: 0 0 20px 0;
+    text-align: center;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    gap: 10px;
+  }
+
+  :deep(.advanced-search-popover) {
+    padding: 20px 0;
+  }
 }
 </style>

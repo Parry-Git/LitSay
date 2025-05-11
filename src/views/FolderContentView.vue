@@ -152,22 +152,7 @@ const currentFolderId = ref<string | number>(
   typeof route.params.id === "string" ? route.params.id : "root"
 );
 const currentFolder = ref<any>({});
-// const folderContents = ref<any[]>([]);
-const folderContents = ref<any>([
-  {
-    id: 1,
-    name: "示例文件夹",
-    type: "folder",
-    createTime: "2025-04-01 10:00:00",
-  },
-  {
-    id: 2,
-    name: "示例文档",
-    type: "document",
-    createTime: "2025-04-02 14:30:00",
-    info: "这是一个示例文档的描述信息",
-  },
-]);
+const folderContents = ref<any[]>([]);
 
 // 对话框相关状态
 const renameDialogVisible = ref(false);
@@ -180,19 +165,42 @@ const fetchFolderContents = async () => {
   loading.value = true;
   try {
     const response = await getFolderContents(currentFolderId.value);
-    const data = response.data.data;
 
-    // 假设接口返回 { currentFolder: {...}, items: [...] }
-    currentFolder.value = data.currentFolder || {};
-    folderContents.value = data.items || [];
+    // 检查返回数据结构
+    console.log("Folder contents response:", response);
 
-    // 如果currentFolder没有label字段，我们使用name字段
+    // 根据返回结构提取数据
+    if (response && response.data && response.data.data) {
+      // 如果是嵌套的data结构
+      if (Array.isArray(response.data.data)) {
+        folderContents.value = response.data.data;
+        currentFolder.value = {
+          id: currentFolderId.value,
+          label: getCurrentFolderName(currentFolderId.value),
+        };
+      } else if (response.data.data.items) {
+        // 如果返回了独立的currentFolder和items字段
+        currentFolder.value = response.data.data.currentFolder || {};
+        folderContents.value = response.data.data.items || [];
+      } else {
+        folderContents.value = response.data.data;
+      }
+    } else if (Array.isArray(response)) {
+      // 如果直接返回了数组
+      folderContents.value = response;
+    } else {
+      folderContents.value = [];
+    }
+
+    // 如果currentFolder没有label字段，我们使用name字段或ID
     if (
       currentFolder.value &&
       !currentFolder.value.label &&
       currentFolder.value.name
     ) {
       currentFolder.value.label = currentFolder.value.name;
+    } else if (!currentFolder.value.label) {
+      currentFolder.value.label = getCurrentFolderName(currentFolderId.value);
     }
   } catch (error) {
     console.error("获取文件夹内容失败", error);
@@ -201,6 +209,17 @@ const fetchFolderContents = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// 根据ID获取文件夹名称
+const getCurrentFolderName = (id: string | number): string => {
+  // 为一些常见ID提供默认名称
+  if (id === 1 || id === "1") return "Home";
+  if (id === 2 || id === "2") return "我的文献库";
+  if (id === "root") return "根目录";
+
+  // 否则返回ID
+  return `文件夹 ${id}`;
 };
 
 // 处理点击文件夹或文档事件

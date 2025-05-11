@@ -157,13 +157,7 @@ interface SearchResult {
   id: string | number;
   name: string;
   type: "document" | "folder";
-  matchField?:
-    | "title"
-    | "author"
-    | "doi"
-    | "affiliation"
-    | "conference"
-    | "foldername";
+  matchField?: string; // 修改为接受任意字符串，而不是限定的联合类型
   path?: string;
 }
 
@@ -229,7 +223,7 @@ const performSearch = async () => {
     };
 
     const response = await searchLibrary(searchQuery.value, searchParams);
-    searchResults.value = response.data.results || [];
+    searchResults.value = response.data.data?.results || [];
     currentPage.value = 1; // 重置分页
   } catch (error) {
     console.error("搜索失败", error);

@@ -8,6 +8,7 @@
       :highlight-current="true"
       :expand-on-click-node="false"
       @node-click="handleNodeClick"
+      v-loading="loading"
     >
       <template #default="{ node, data }">
         <div class="custom-tree-node">
@@ -24,87 +25,60 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { Folder, FolderOpened, Document } from "@element-plus/icons-vue";
+import { folderData as mockFolderData } from "@/mock/folderData";
+// 如果有API获取文件夹结构，可以导入
+// import { getFolderStructure } from "@/api/load";
+import { ElMessage } from "element-plus";
 
 const router = useRouter();
+const loading = ref(false);
 
-const folderData = ref([
-  {
-    id: 1,
-    label: "Home",
-    icon: "home",
-  },
-  {
-    id: 2,
-    label: "My Library",
-    icon: "folder",
-    children: [
-      {
-        id: 21,
-        label: "Colab Notebooks",
-        icon: "folder",
-        children: [],
-      },
-      {
-        id: 22,
-        label: "UMich EECS 498-007...",
-        icon: "folder",
-        children: [
-          {
-            id: 221,
-            label: "2019_A4_pytorch",
-            icon: "folder",
-            children: [
-              {
-                id: 2211,
-                label: "A1",
-                icon: "folder",
-              },
-              {
-                id: 2212,
-                label: "A2",
-                icon: "folder",
-              },
-              {
-                id: 2213,
-                label: "A3",
-                icon: "folder",
-              },
-              {
-                id: 2214,
-                label: "A4",
-                icon: "folder",
-              },
-              {
-                id: 2215,
-                label: "A5",
-                icon: "folder",
-              },
-              {
-                id: 2216,
-                label: "A6",
-                icon: "folder",
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-]);
+// 初始化为空数组，等待数据加载
+const folderData = ref<any[]>([]);
 
 const defaultProps = {
   children: "children",
   label: "label",
 };
 
-const handleNodeClick = (data: any) => {
-  console.log(data);
+// 获取文件夹结构的函数
+const fetchFolderStructure = async () => {
+  loading.value = true;
+  try {
+    // 优先使用API获取数据
+    // const response = await getFolderStructure();
+    // folderData.value = response.data.data || [];
 
+    // 使用模拟数据
+    folderData.value = mockFolderData;
+  } catch (error) {
+    console.error("获取文件夹结构失败", error);
+    ElMessage.error("获取文件夹结构失败");
+    // 如果获取失败，至少提供基本结构
+    folderData.value = [
+      {
+        id: 1,
+        label: "Home",
+        icon: "home",
+      },
+      {
+        id: 2,
+        label: "我的文献库",
+        icon: "folder",
+        children: [],
+      },
+    ];
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleNodeClick = (data: any) => {
   // 检测点击的是否为Home节点
-  if (data.id === 1 && data.label === "Home") {
+  if (data.id === 1 && (data.label === "Home" || data.label === "首页")) {
     // 导航到home路由
     router.push("/");
   } else {
@@ -112,6 +86,11 @@ const handleNodeClick = (data: any) => {
     router.push(`/folder/${data.id}`);
   }
 };
+
+// 组件挂载时获取文件夹结构
+onMounted(() => {
+  fetchFolderStructure();
+});
 </script>
 
 <style scoped>
