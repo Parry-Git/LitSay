@@ -12,10 +12,6 @@
           <el-icon><Edit /></el-icon>
           编辑元数据
         </el-button>
-        <el-button type="success" size="small" @click="handleDownload">
-          <el-icon><Download /></el-icon>
-          下载
-        </el-button>
       </div>
     </div>
 
@@ -38,8 +34,25 @@
               {{ document.title }}
             </a-descriptions-item>
 
-            <a-descriptions-item label="作者">
-              {{ document.authors?.join(", ") || "未知" }}
+            <!-- 作者信息 -->
+            <a-descriptions-item label="作者信息" :span="3">
+              <div class="authors-table">
+                <a-table
+                  :dataSource="formattedAuthors"
+                  :columns="authorColumns"
+                  :pagination="false"
+                  size="small"
+                  bordered
+                >
+                  <template #bodyCell="{ column, record }">
+                    <template v-if="column.dataIndex === 'sequence'">
+                      <a-tag :color="getSequenceColor(record.sequence)">
+                        {{ getSequenceLabel(record.sequence) }}
+                      </a-tag>
+                    </template>
+                  </template>
+                </a-table>
+              </div>
             </a-descriptions-item>
 
             <a-descriptions-item label="出版日期">
@@ -56,40 +69,22 @@
               <span v-else>未知</span>
             </a-descriptions-item>
 
-            <a-descriptions-item label="期刊/会议" :span="2">
-              {{ document.journal || document.conference || "未知" }}
-            </a-descriptions-item>
-
-            <a-descriptions-item label="机构" :span="3">
-              <template
-                v-if="document.institutions && document.institutions.length"
-              >
-                <div
-                  v-for="(inst, index) in document.institutions"
-                  :key="index"
-                >
-                  {{ inst
-                  }}{{
-                    document.institution_location &&
-                    document.institution_location[index]
-                      ? ` (${document.institution_location[index]})`
-                      : ""
-                  }}
-                </div>
-              </template>
-              <span v-else>未知</span>
-            </a-descriptions-item>
-
-            <a-descriptions-item label="文件类型">
-              {{ document.fileType || "未知" }}
-            </a-descriptions-item>
-
-            <a-descriptions-item label="文件大小">
-              {{ document.fileSize || "未知" }}
-            </a-descriptions-item>
-
             <a-descriptions-item label="上传时间">
               {{ document.uploadTime || "未知" }}
+            </a-descriptions-item>
+
+            <!-- 期刊信息 -->
+            <a-descriptions-item v-if="document.journal" label="期刊" :span="3">
+              {{ document.journal }}
+            </a-descriptions-item>
+
+            <!-- 会议信息 -->
+            <a-descriptions-item
+              v-if="document.conference"
+              label="会议"
+              :span="3"
+            >
+              {{ document.conference }}
             </a-descriptions-item>
 
             <a-descriptions-item label="关键词" :span="3">
@@ -115,10 +110,6 @@
               <a-button type="link" size="small" @click="toggleEditStars">
                 {{ editingStars ? "保存" : "编辑" }}
               </a-button>
-            </a-descriptions-item>
-
-            <a-descriptions-item label="摘要" :span="3">
-              {{ document.abstract || "无摘要" }}
             </a-descriptions-item>
           </a-descriptions>
         </a-tab-pane>
@@ -169,7 +160,7 @@
           </div>
         </a-tab-pane>
 
-        <a-tab-pane key="3" tab="文件预览">
+        <!-- <a-tab-pane key="3" tab="文件预览">
           <div class="pdf-container">
             <a-empty
               v-if="!document.fileUrl"
@@ -184,7 +175,7 @@
               frameborder="0"
             ></iframe>
           </div>
-        </a-tab-pane>
+        </a-tab-pane> -->
       </a-tabs>
     </div>
   </div>
@@ -224,6 +215,75 @@ const editingStars = ref(false);
 const editingNote = ref(false);
 const editedNote = ref("");
 
+// 定义作者表格列
+const authorColumns = [
+  {
+    title: "姓名",
+    dataIndex: "name",
+    key: "name",
+  },
+  {
+    title: "角色",
+    dataIndex: "sequence",
+    key: "sequence",
+  },
+  {
+    title: "机构",
+    dataIndex: "institution",
+    key: "institution",
+  },
+  {
+    title: "所在地",
+    dataIndex: "location",
+    key: "location",
+  },
+  {
+    title: "联系方式",
+    dataIndex: "email",
+    key: "email",
+  },
+];
+
+// 格式化作者信息
+const formattedAuthors = computed(() => {
+  if (!document.value.authors || !document.value.authors.length) {
+    return [];
+  }
+
+  return document.value.authors.map((author, index) => {
+    return {
+      key: index,
+      name: author || "-",
+      sequence: document.value.sequence?.[index] || "-",
+      institution: document.value.institutions?.[index] || "-",
+      location: document.value.institution_location?.[index] || "-",
+      email: document.value.email?.[index] || "-",
+    };
+  });
+});
+
+// 获取作者角色标签颜色
+const getSequenceColor = (sequence) => {
+  const colors = {
+    first: "green",
+    corresponding: "red",
+    additional: "blue",
+    "-": "default",
+  };
+  return colors[sequence] || "default";
+};
+
+// 获取作者角色标签文本
+const getSequenceLabel = (sequence) => {
+  const labels = {
+    first: "第一作者",
+    corresponding: "通讯作者",
+    additional: "合作者",
+    "-": "未知",
+  };
+  return labels[sequence] || sequence;
+};
+
 // 渲染笔记
 const renderedNote = computed(() => {
   return document.value.note ? md.render(document.value.note) : "";
@@ -261,13 +321,19 @@ const fetchDocumentDetails = async () => {
           id: documentId.value,
           title: "深度学习在自然语言处理中的应用研究",
           authors: ["张三", "李四", "王五"],
+          sequence: ["first", "corresponding", "additional"],
+          institutions: ["北京大学", "清华大学", null],
+          institution_location: ["北京, 中国", "北京, 中国", null],
+          email: ["zhangsan@pku.edu.cn", "lisi@tsinghua.edu.cn", null],
           abstract:
             "本文探讨了深度学习技术在自然语言处理领域的最新应用和进展...",
           publishDate: "2023-06-15",
           fileType: "PDF",
           fileSize: "2.3 MB",
           uploadTime: "2023-10-20 14:30:22",
-          tags: ["深度学习", "NLP", "神经网络", "人工智能"],
+          conference: null,
+          journal: "IEEE Transactions on Neural Networks and Learning Systems",
+          keywords: ["深度学习", "NLP", "神经网络", "人工智能"],
           fileUrl: "https://example.com/sample.pdf",
           stars: 4,
           note: "# 深度学习笔记\n\n这是一篇关于**深度学习**的笔记。\n\n## 主要内容\n1. 神经网络基础\n2. 循环神经网络\n3. 转换器模型",
@@ -339,16 +405,6 @@ const goBack = () => {
 // 编辑元数据
 const handleEdit = () => {
   router.push(`/document/${documentId.value}/edit`);
-};
-
-// 下载文档
-const handleDownload = () => {
-  if (document.value.fileUrl) {
-    window.open(document.value.fileUrl, "_blank");
-    ElMessage.success("开始下载文档...");
-  } else {
-    ElMessage.warning("文档链接不可用");
-  }
 };
 
 // 组件挂载时获取文档详情
@@ -545,5 +601,19 @@ onMounted(() => {
   min-height: 300px;
   max-height: 500px;
   overflow-y: auto;
+}
+
+/* 作者表格样式 */
+.authors-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.authors-table :deep(.ant-table-small) {
+  font-size: 13px;
+}
+
+.authors-table :deep(.ant-table-cell) {
+  padding: 8px 12px;
 }
 </style>
