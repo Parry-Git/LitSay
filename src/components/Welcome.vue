@@ -72,11 +72,26 @@ import {
   Plus,
   Files,
 } from "@element-plus/icons-vue";
-import { userStatsData } from "@/mock/userStatsData";
+import { getUserStats } from "@/api/load";
 
 const router = useRouter();
-// 使用模拟数据
-const userStats = ref(userStatsData);
+
+// 添加用户统计数据
+const userStats = ref<any>({
+  totalDocuments: 0,
+  recentlyViewed: 0,
+  totalFolders: 0,
+});
+
+// 获取用户统计数据
+const fetchUserStats = async () => {
+  try {
+    const response = await getUserStats();
+    userStats.value = response.data.data;
+  } catch (error) {
+    console.error("获取用户统计数据失败", error);
+  }
+};
 
 const goToUpload = () => {
   router.push("/upload");
@@ -85,6 +100,11 @@ const goToUpload = () => {
 const goToFiles = () => {
   router.push("/folder/2"); // 导航到我的文献库
 };
+
+// 组件挂载时获取统计数据
+onMounted(() => {
+  fetchUserStats();
+});
 </script>
 
 <style scoped>

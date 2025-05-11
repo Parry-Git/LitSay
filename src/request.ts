@@ -7,9 +7,14 @@ export const myAxios = axios.create({
 });
 
 // 添加请求拦截器
-axios.interceptors.request.use(
+myAxios.interceptors.request.use(
   function (config) {
     // 在发送请求之前做些什么
+    // 从 localStorage 中获取 token 添加到请求头
+    const token = localStorage.getItem("token");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   function (error) {
@@ -19,24 +24,23 @@ axios.interceptors.request.use(
 );
 
 // 添加响应拦截器
-axios.interceptors.response.use(
+myAxios.interceptors.response.use(
   function (response) {
     // 2xx 范围内的状态码都会触发该函数。
     // 对响应数据做点什么
     console.log(response);
 
-    // const { data } = response;
+    const { data } = response;
 
-    // console.log(data);
-    // // 未登录
-    // if (data.status === 40100) {
-    //   if (
-    //     !response.request.responseURL.includes("user/current") &&
-    //     !window.location.pathname.includes("user/login") // 若原本页面就是登录页面
-    //   ) {
-    //     window.location.href = `/login?redirect=${window.location.href};`;
-    //   }
-    // }
+    // 未登录
+    if (data.status === 40100) {
+      if (
+        !response.request.responseURL.includes("user/current") &&
+        !window.location.pathname.includes("user/login") // 若原本页面就是登录页面
+      ) {
+        window.location.href = `/login?redirect=${window.location.href}`;
+      }
+    }
 
     return response;
   },

@@ -28,9 +28,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { Folder, FolderOpened, Document } from "@element-plus/icons-vue";
-import { folderData as mockFolderData } from "@/mock/folderData";
-// 如果有API获取文件夹结构，可以导入
-// import { getFolderStructure } from "@/api/load";
+import { getFolderStructure } from "@/api/load";
 import { ElMessage } from "element-plus";
 
 const router = useRouter();
@@ -48,12 +46,9 @@ const defaultProps = {
 const fetchFolderStructure = async () => {
   loading.value = true;
   try {
-    // 优先使用API获取数据
-    // const response = await getFolderStructure();
-    // folderData.value = response.data.data || [];
-
-    // 使用模拟数据
-    folderData.value = mockFolderData;
+    // 直接使用 API 函数，它会根据环境自动选择数据源
+    const response = await getFolderStructure();
+    folderData.value = response.data.data || [];
   } catch (error) {
     console.error("获取文件夹结构失败", error);
     ElMessage.error("获取文件夹结构失败");

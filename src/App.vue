@@ -1,7 +1,10 @@
 <template>
-  <AppLayout>
-    <router-view />
-  </AppLayout>
+  <router-view v-slot="{ Component }">
+    <component :is="Component" v-if="$route.meta.fullScreen" />
+    <AppLayout v-else>
+      <component :is="Component" />
+    </AppLayout>
+  </router-view>
 </template>
 
 <script setup lang="ts">

@@ -183,18 +183,36 @@
           </div>
         </div>
       </div>
+
+      <!-- 修改的头部右侧区域 -->
       <div class="header-right">
-        <el-tooltip content="Settings" placement="bottom">
-          <el-button circle>
-            <el-icon><Setting /></el-icon>
-          </el-button>
-        </el-tooltip>
-        <el-tooltip content="Apps" placement="bottom">
-          <el-button circle>
-            <el-icon><Grid /></el-icon>
-          </el-button>
-        </el-tooltip>
-        <el-avatar :size="32" class="user-avatar">U</el-avatar>
+        <!-- 用户方框和下拉菜单 -->
+        <a-dropdown :trigger="['click']" placement="bottomRight">
+          <div class="user-info-trigger">
+            <div class="username-box">
+              {{ truncatedUsername }}
+            </div>
+            <down-outlined />
+          </div>
+
+          <template #overlay>
+            <a-menu>
+              <a-menu-item key="profile" @click="showUserDrawer = true">
+                <template #icon><user-outlined /></template>
+                个人资料
+              </a-menu-item>
+              <a-menu-item key="settings">
+                <template #icon><setting-outlined /></template>
+                设置
+              </a-menu-item>
+              <a-menu-divider />
+              <a-menu-item key="logout" @click="handleLogout">
+                <template #icon><logout-outlined /></template>
+                退出登录
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
       </div>
     </header>
 
@@ -240,16 +258,77 @@
         <slot></slot>
       </main>
     </div>
+
+    <!-- 用户控制浮窗 -->
+    <a-drawer
+      title="个人资料"
+      :visible="showUserDrawer"
+      @close="showUserDrawer = false"
+      placement="right"
+      :width="360"
+      :mask-style="{ backgroundColor: 'rgba(0, 0, 0, 0.45)' }"
+    >
+      <div class="user-profile">
+        <div class="user-profile-header">
+          <div class="profile-username-box">
+            {{ userInfo.username || "未登录用户" }}
+          </div>
+          <div class="profile-info">
+            <h2>{{ userInfo.username || "未登录用户" }}</h2>
+            <p>{{ userInfo.role === "admin" ? "管理员" : "普通用户" }}</p>
+          </div>
+        </div>
+
+        <a-divider />
+
+        <div class="profile-details">
+          <h3>账号信息</h3>
+
+          <a-descriptions :column="1">
+            <a-descriptions-item label="用户名">
+              {{ userInfo.username || "未登录" }}
+            </a-descriptions-item>
+            <a-descriptions-item label="用户角色">
+              {{ userInfo.role === "admin" ? "管理员" : "普通用户" }}
+            </a-descriptions-item>
+            <a-descriptions-item label="ID">
+              {{ userInfo.id || "N/A" }}
+            </a-descriptions-item>
+            <a-descriptions-item label="创建时间">
+              {{ userInfo.createdAt || "未知" }}
+            </a-descriptions-item>
+          </a-descriptions>
+        </div>
+
+        <a-divider />
+
+        <div class="profile-actions">
+          <a-button type="primary" block @click="handleEditProfile"
+            >编辑资料</a-button
+          >
+          <a-button style="margin-top: 16px" block @click="handleChangePassword"
+            >修改密码</a-button
+          >
+          <a-button
+            type="danger"
+            style="margin-top: 16px"
+            block
+            @click="handleLogout"
+          >
+            退出登录
+          </a-button>
+        </div>
+      </div>
+    </a-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from "vue";
+import { ref, watch, onUnmounted, onMounted, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 import {
   Search,
-  Setting,
-  Grid,
   Plus,
   Monitor,
   Share,
@@ -260,9 +339,24 @@ import {
   Loading,
   Filter,
 } from "@element-plus/icons-vue";
+
+// 修改导入方式，直接导入所需图标
+import UserOutlined from "@ant-design/icons-vue/UserOutlined";
+import SettingOutlined from "@ant-design/icons-vue/SettingOutlined";
+import LogoutOutlined from "@ant-design/icons-vue/LogoutOutlined";
+import DownOutlined from "@ant-design/icons-vue/DownOutlined";
+
 import FolderTree from "@/components/FolderTree.vue";
 import { searchLibrary } from "@/api/load";
-import { ElMessage } from "element-plus";
+import { logout } from "@/api/auth";
+
+// 注册图标组件，使其在模板中可用
+const icons = {
+  UserOutlined,
+  SettingOutlined,
+  LogoutOutlined,
+  DownOutlined,
+};
 
 // 定义搜索结果类型
 interface SearchResult {
@@ -282,11 +376,20 @@ interface AdvancedSearchForm {
   uploadTime: string | null;
 }
 
+// 用户信息类型
+interface UserInfo {
+  username: string;
+  role: string;
+  id: string;
+  createdAt?: string;
+}
+
 const router = useRouter();
 const searchQuery = ref("");
 const searching = ref(false);
 const searchResults = ref<SearchResult[]>([]);
 const showSearchResults = ref(false);
+const showUserDrawer = ref(false);
 let hideResultsTimeout: number | null = null;
 
 // 高级搜索相关
@@ -298,6 +401,38 @@ const advancedSearchForm = ref<AdvancedSearchForm>({
   authorCount: null,
   uploadTime: null,
 });
+
+// 用户信息
+const userInfo = reactive<UserInfo>({
+  username: "",
+  role: "",
+  id: "",
+});
+
+// 计算缩略后的用户名
+const truncatedUsername = computed(() => {
+  if (!userInfo.username) return "用户";
+  return userInfo.username.length > 8
+    ? `${userInfo.username.substring(0, 8)}...`
+    : userInfo.username;
+});
+
+// 获取用户信息
+const getUserInfo = () => {
+  // 从 localStorage 获取用户信息
+  const storedUserInfo = localStorage.getItem("userInfo");
+  if (storedUserInfo) {
+    try {
+      const parsedInfo = JSON.parse(storedUserInfo);
+      userInfo.username = parsedInfo.username || "";
+      userInfo.role = parsedInfo.role || "";
+      userInfo.id = parsedInfo.id || "";
+      userInfo.createdAt = parsedInfo.createdAt || "2023-01-01";
+    } catch (e) {
+      console.error("解析用户信息失败", e);
+    }
+  }
+};
 
 // 添加导航到上传页面的方法
 const goToUpload = () => {
@@ -440,6 +575,51 @@ const hideSearchResultsDelayed = () => {
   }, 200);
 };
 
+// 处理登出
+const handleLogout = async () => {
+  try {
+    // 判断是否为管理员
+    const isAdmin = userInfo.role === "admin";
+
+    await logout();
+
+    // 清除显示的用户信息
+    userInfo.username = "";
+    userInfo.role = "";
+    userInfo.id = "";
+    userInfo.createdAt = "";
+
+    // 关闭用户抽屉如果已打开
+    showUserDrawer.value = false;
+
+    ElMessage.success(isAdmin ? "管理员退出成功" : "退出成功");
+    router.push("/login");
+  } catch (error) {
+    console.error("登出失败", error);
+    ElMessage.error("登出失败，请重试");
+
+    // 即使API调用失败，也尝试重定向到登录页面
+    router.push("/login");
+  }
+};
+
+// 编辑个人资料
+const handleEditProfile = () => {
+  ElMessage.info("编辑个人资料功能开发中...");
+  // TODO: 实现编辑个人资料功能
+};
+
+// 修改密码
+const handleChangePassword = () => {
+  ElMessage.info("修改密码功能开发中...");
+  // TODO: 实现修改密码功能
+};
+
+// 组件挂载时获取用户信息
+onMounted(() => {
+  getUserInfo();
+});
+
 // 清理组件销毁前的超时
 onUnmounted(() => {
   if (hideResultsTimeout) {
@@ -577,6 +757,92 @@ onUnmounted(() => {
 
 .view-all-button {
   color: #409eff;
+}
+
+/* 头部右侧样式 */
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-info-trigger {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.user-info-trigger:hover {
+  background-color: #f0f2f5;
+}
+
+/* 用户名方框样式 */
+.username-box {
+  height: 32px;
+  padding: 0 10px;
+  background-color: #f0f2f5;
+  color: rgba(0, 0, 0, 0.85);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  font-size: 14px;
+  border: 1px solid #e8e8e8;
+  min-width: 80px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 用户资料抽屉样式 */
+.user-profile-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* 个人资料页面中的用户名方框 */
+.profile-username-box {
+  height: 64px;
+  width: 64px;
+  background-color: #f0f2f5;
+  color: rgba(0, 0, 0, 0.85);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  font-size: 16px;
+  font-weight: 500;
+  border: 1px solid #e8e8e8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-info h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.profile-info p {
+  margin: 4px 0 0;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.profile-details {
+  margin-bottom: 24px;
+}
+
+.profile-details h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 /* 其他已有样式保持不变 */

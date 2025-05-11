@@ -6,59 +6,83 @@ const routes: Array<RouteRecordRaw> = [
     path: "/",
     name: "home",
     component: HomeView,
+    meta: { requiresAuth: true }, // 需要认证
+  },
+  {
+    path: "/login",
+    name: "login",
+    component: () => import("../views/LoginView.vue"),
+    meta: {
+      guest: true, // 游客可访问
+      fullScreen: true, // 设置为全屏页面 - 不使用AppLayout
+    },
   },
   {
     path: "/about",
     name: "about",
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "about" */ "../views/AboutView.vue"),
+    component: () => import("../views/AboutView.vue"),
+    meta: { requiresAuth: true }, // 需要认证
   },
   {
     path: "/upload",
     name: "upload",
-    component: () =>
-      import(/* webpackChunkName: "upload" */ "../views/UploadView.vue"),
+    component: () => import("../views/UploadView.vue"),
+    meta: { requiresAuth: true }, // 需要认证
   },
   // 添加新的文件夹内容路由
   {
     path: "/folder/:id",
     name: "folder-content",
-    component: () =>
-      import(/* webpackChunkName: "folder" */ "../views/FolderContentView.vue"),
+    component: () => import("../views/FolderContentView.vue"),
+    meta: { requiresAuth: true }, // 需要认证
   },
   // 文档详情页面路由
   {
     path: "/document/:id",
     name: "document-detail",
-    component: () =>
-      import(
-        /* webpackChunkName: "document" */ "../views/DocumentDetailView.vue"
-      ),
+    component: () => import("../views/DocumentDetailView.vue"),
+    meta: { requiresAuth: true }, // 需要认证
   },
   // 文档编辑页面路由
   {
     path: "/document/:id/edit",
     name: "document-edit",
-    component: () =>
-      import(
-        /* webpackChunkName: "document-edit" */ "../views/DocumentEditView.vue"
-      ),
+    component: () => import("../views/DocumentEditView.vue"),
+    meta: { requiresAuth: true }, // 需要认证
   },
   // 添加搜索结果页面路由
   {
     path: "/search",
     name: "search-results",
-    component: () =>
-      import(/* webpackChunkName: "search" */ "../views/SearchResultView.vue"),
+    component: () => import("../views/SearchResultView.vue"),
+    meta: { requiresAuth: true }, // 需要认证
   },
 ];
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes,
+});
+
+// 添加路由守卫
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = !!localStorage.getItem("token");
+
+  // 需要登录但未登录时重定向到登录页
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    next({
+      path: "/login",
+      query: { redirect: to.fullPath },
+    });
+  }
+  // 已登录用户访问登录页，重定向到首页
+  else if (to.meta.guest && isAuthenticated) {
+    next("/");
+  }
+  // 其他正常访问
+  else {
+    next();
+  }
 });
 
 export default router;
