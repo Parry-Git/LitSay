@@ -798,12 +798,22 @@ async function handleConfirmUpload() {
 
 // 取消上传
 function handleCancelUpload() {
+  // 保存当前预览窗口的可见状态，用于在用户取消"取消上传"操作后恢复
+  const currentVisibility = parseResultVisible.value;
+
   Modal.confirm({
     title: "确认取消?",
     content: "取消操作将丢失当前的解析结果，确定要取消吗？",
     onOk() {
+      // 用户确认取消操作，关闭预览窗口
       parseResultVisible.value = false;
       uploading.value = false;
+      confirmLoading.value = false; // 重置加载状态，防止再次打开时按钮显示加载
+    },
+    onCancel() {
+      // 用户取消"取消"操作，确保预览窗口保持打开
+      console.log("用户取消了'取消上传'操作，继续编辑");
+      parseResultVisible.value = true; // 明确设置为 true，确保窗口显示
     },
   });
 }
