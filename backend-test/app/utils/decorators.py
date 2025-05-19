@@ -11,10 +11,10 @@ def token_required(f):
             try:
                 token = auth_header.split(" ")[1] # Bearer <token>
             except IndexError:
-                return jsonify({'message': 'Bearer token malformed!'}), 401
+                return jsonify({'message': 'Token is missing!'}), 401
 
         if not token:
-            return jsonify({'message': 'Token is missing!'}), 401
+            return jsonify({'message': 'Authorization is missing!'}), 401
 
         try:
             data = jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
