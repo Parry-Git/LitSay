@@ -15,6 +15,8 @@ class Config:
     OB_PASSWORD = os.environ.get('OB_PASSWORD')
     OB_DATABASE = os.environ.get('OB_DATABASE')
 
+    UPLOAD_FOLDER = '/home/parry-wsl/study/database/upload_base'
+
     # SQLAlchemy
     # SQLALCHEMY_DATABASE_URI = f"mysql+mysqlconnector://{OB_USER}:{OB_PASSWORD}@{OB_HOST}:{OB_PORT}/{OB_DATABASE}"
     # SQLALCHEMY_TRACK_MODIFICATIONS = False

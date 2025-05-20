@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import request, jsonify, current_app, g
 import jwt
+from app.db import query_db
 
 def login_required(f):
     @wraps(f)
@@ -17,10 +18,7 @@ def login_required(f):
             return jsonify({"error": "Authentication Error", 'message': 'Authorization is missing!'}), 401
 
         try:
-            data = jwt.decode(token, 
-                            current_app.config['JWT_SECRET_KEY'], 
-                            algorithms=["HS256"])
-                            
+            data = jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=current_app.config['JWT_ALGORITHM'])
             user = query_db("SELECT user_id, user_name, role FROM user WHERE user_id = %s", (data['user_id'],), one=True)
             if not user:
                 return jsonify({"error": "Authentication Error", "message": "User not found."}), 401
