@@ -2,6 +2,8 @@ Flask
 mysql-connector-python
 python-dotenv
 Flask-Bcrypt
-PyJWT  # For JWT authentication
 Flask-Cors # For handling Cross-Origin Resource Sharing
+PyJWT  # For JWT authentication
 pytest
+click
+Werkzeug

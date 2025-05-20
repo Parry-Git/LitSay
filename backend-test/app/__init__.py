@@ -8,6 +8,7 @@ import mysql.connector
 from .config import config
 from .db import init_app as init_db_app
 
+bcrypt = Bcrypt()
 
 def create_app(config_name='default'):
     app = Flask(__name__)
@@ -20,14 +21,13 @@ def create_app(config_name='default'):
     app.logger.info(f"Starting app in {config_name} mode.")
     app.logger.info(f"Database: {app.config.get('OB_DATABASE')}")
 
-    bcrypt = Bcrypt()
     bcrypt.init_app(app)
     CORS(app)
     init_db_app(app)
 
     # # Register blueprints
-    # from .auth.routes import auth_bp
-    # app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    from .auth.routes import auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
     # from .papers.routes import papers_bp
     # app.register_blueprint(papers_bp, url_prefix='/api/papers')
