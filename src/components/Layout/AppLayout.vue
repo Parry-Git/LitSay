@@ -228,7 +228,7 @@
         </div>
 
         <!-- 文件夹树形导航 -->
-        <FolderTree class="folder-tree" />
+        <FolderTree class="folder-tree" :data="folderTreeData" />
 
         <!-- 快捷导航菜单 -->
         <div class="quick-links">
@@ -347,8 +347,10 @@ import LogoutOutlined from "@ant-design/icons-vue/LogoutOutlined";
 import DownOutlined from "@ant-design/icons-vue/DownOutlined";
 
 import FolderTree from "@/components/FolderTree.vue";
-import { searchLibrary } from "@/api/load";
+import { searchLibrary, getFolderStructure } from "@/api/load";
 import { logout } from "@/api/auth";
+import { useEventBus } from "@vueuse/core";
+import { message } from "ant-design-vue"; // 添加message导入
 
 // 注册图标组件，使其在模板中可用
 const icons = {
@@ -415,6 +417,11 @@ const truncatedUsername = computed(() => {
   return userInfo.username.length > 8
     ? `${userInfo.username.substring(0, 8)}...`
     : userInfo.username;
+});
+
+// 添加登录状态的计算属性
+const isLoggedIn = computed(() => {
+  return localStorage.getItem("token") !== null;
 });
 
 // 获取用户信息
@@ -613,6 +620,55 @@ const handleEditProfile = () => {
 const handleChangePassword = () => {
   ElMessage.info("修改密码功能开发中...");
   // TODO: 实现修改密码功能
+};
+
+// 创建一个事件总线用于跨组件通信
+const folderChangedBus = useEventBus("folder-changed");
+
+// 侧栏中的文件夹树数据
+const folderTreeData = ref<any[]>([]);
+const loading = ref(false);
+
+// 获取文件夹树结构
+const fetchFolderTree = async () => {
+  if (!isLoggedIn.value) return;
+
+  loading.value = true;
+  try {
+    const response = await getFolderStructure();
+    if (response?.data?.code === 0) {
+      folderTreeData.value = response.data.data || [];
+      console.log("文件夹树结构已更新", folderTreeData.value);
+    } else {
+      console.error("获取文件夹结构失败", response?.data?.message);
+    }
+  } catch (error) {
+    console.error("获取文件夹结构错误:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 监听事件，当文件夹结构变化时刷新树
+onMounted(() => {
+  // 初始加载
+  fetchFolderTree();
+
+  // 监听文件夹变更事件
+  folderChangedBus.on(() => {
+    console.log("检测到文件夹结构变更，正在刷新...");
+    fetchFolderTree();
+  });
+});
+
+// 清理事件监听
+onUnmounted(() => {
+  folderChangedBus.off();
+});
+
+// 手动刷新树结构的方法（可选）
+const refreshFolderTree = () => {
+  fetchFolderTree();
 };
 
 // 组件挂载时获取用户信息

@@ -1,39 +1,54 @@
-import { myAxios } from "@/request";
+import axios from "axios";
+import {
+  API_BASE_URL,
+  buildApiPath,
+  DEFAULT_REQUEST_CONFIG,
+  getAuthHeaders,
+} from "./config";
 
 /**
  * 用户登录
  * @param username 用户名
  * @param password 密码
- * @returns Promise 包含用户信息和token
+ * @returns Promise 登录结果
  */
 export const login = async (username: string, password: string) => {
   try {
-    const response = await myAxios.post("/user/login", {
-      username,
-      password,
-    });
+    const response = await axios.post(
+      buildApiPath("/auth/login"),
+      { username, password },
+      { headers: DEFAULT_REQUEST_CONFIG.headers }
+    );
 
-    // 保存token到localStorage
-    if (response.data.data.token) {
-      localStorage.setItem("token", response.data.data.token);
+    const responseData = response.data;
+    console.log("登录API响应:", responseData);
 
-      // 保存用户信息
-      if (response.data.data.user) {
-        localStorage.setItem(
-          "userInfo",
-          JSON.stringify(response.data.data.user)
-        );
-      }
+    let token, user;
+
+    if (responseData.access_token) {
+      token = responseData.access_token;
+      user = responseData.user;
+    } else if (responseData.data && responseData.data.access_token) {
+      token = responseData.data.access_token;
+      user = responseData.data.user;
     }
 
-    return response.data;
+    if (token) {
+      localStorage.setItem("token", token);
+      console.log("API - Token已存储:", token);
+    }
+
+    if (user) {
+      localStorage.setItem("userInfo", JSON.stringify(user));
+      console.log("API - 用户信息已存储:", user);
+    }
+
+    return responseData;
   } catch (error: any) {
-    if (error.response) {
-      throw new Error(
-        error.response.data.message || "登录失败，请检查用户名和密码"
-      );
-    }
-    throw error;
+    console.error("登录失败:", error.response?.data || error.message);
+    throw new Error(
+      error.response?.data?.message || "登录失败，请检查用户名和密码"
+    );
   }
 };
 
@@ -41,83 +56,59 @@ export const login = async (username: string, password: string) => {
  * 用户注册
  * @param username 用户名
  * @param password 密码
- * @returns Promise 包含注册结果
+ * @returns Promise 注册结果
  */
 export const register = async (username: string, password: string) => {
   try {
-    const response = await myAxios.post("/user/register", {
-      username,
-      password,
-    });
-
+    const response = await axios.post(
+      buildApiPath("/auth/register"),
+      { username, password },
+      { headers: DEFAULT_REQUEST_CONFIG.headers }
+    );
     return response.data;
   } catch (error: any) {
-    if (error.response) {
-      throw new Error(
-        error.response.data.message || "注册失败，用户名可能已存在"
-      );
-    }
-    throw error;
+    console.error(
+      "Registration failed:",
+      error.response?.data || error.message
+    );
+    throw new Error(error.response?.data?.message || "注册失败，请稍后再试");
   }
 };
 
 /**
  * 用户登出
- * @returns Promise 包含登出结果
+ * @returns Promise
  */
 export const logout = async () => {
   try {
-    // 检查是否为模拟的管理员账号
-    const userInfo = localStorage.getItem("userInfo");
-    const token = localStorage.getItem("token");
-
-    if (userInfo && token === "admin-mock-token") {
-      // 如果是模拟的管理员账户，直接清除本地存储
-      localStorage.removeItem("token");
-      localStorage.removeItem("userInfo");
-      return { success: true, message: "管理员退出成功" };
-    }
-
-    // 否则调用实际的登出接口
-    const response = await myAxios.post("/user/logout");
-
-    // 清除本地存储的token和用户信息
     localStorage.removeItem("token");
     localStorage.removeItem("userInfo");
 
-    return response.data;
+    return { success: true };
   } catch (error: any) {
-    // 即使API调用失败，也尝试清除本地存储
+    console.error("Logout failed:", error);
+    // 即使API调用失败，也清除本地存储
     localStorage.removeItem("token");
     localStorage.removeItem("userInfo");
-
     throw error;
   }
 };
 
 /**
- * 获取当前登录用户信息
- * @returns Promise 包含用户信息
+ * 获取用户个人资料
+ * @returns Promise 用户资料
  */
-export const getCurrentUser = async () => {
-  // 检查是否为模拟的管理员账号
-  const userInfo = localStorage.getItem("userInfo");
-  const token = localStorage.getItem("token");
-
-  if (userInfo && token === "admin-mock-token") {
-    // 如果是模拟的管理员账户，直接返回用户信息
-    return {
-      success: true,
-      data: JSON.parse(userInfo),
-      message: "获取管理员信息成功",
-    };
-  }
-
-  // eslint-disable-next-line no-useless-catch
+export const getUserProfile = async () => {
   try {
-    const response = await myAxios.get("/user/current");
+    const response = await axios.get(buildApiPath("/auth/profile"), {
+      headers: getAuthHeaders(),
+    });
     return response.data;
   } catch (error: any) {
-    throw error;
+    console.error(
+      "Failed to get user profile:",
+      error.response?.data || error.message
+    );
+    throw new Error(error.response?.data?.message || "获取用户资料失败");
   }
 };

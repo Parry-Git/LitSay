@@ -1,4 +1,11 @@
-import { myAxios } from "@/request";
+import axios from "axios";
+import {
+  API_BASE_URL,
+  buildApiPath,
+  DEFAULT_REQUEST_CONFIG,
+  getAuthHeaders,
+} from "./config";
+import { notifyFolderStructureChanged } from "@/services/EventService";
 
 // 导入所有的模拟数据
 import {
@@ -12,7 +19,8 @@ import {
 } from "@/mock";
 
 // 判断是否为开发环境
-const isDevelopment = process.env.NODE_ENV === "development";
+// const isDevelopment = process.env.NODE_ENV === "development";
+const isDevelopment = process.env.NODE_ENV === "not";
 
 /**
  * 获取用户ID
@@ -52,12 +60,13 @@ export const getFolderContents = async (folderId: string | number) => {
     });
   }
 
-  // 生产环境使用实际 API
-  const userId = getCurrentUserId();
+  // 生产环境使用实际 API - 更新为正确的API路径
   try {
-    return await myAxios.get(`/folder/${folderId}`, {
-      params: { userId },
+    const response = await axios.get(buildApiPath(`/folder/${folderId}`), {
+      headers: getAuthHeaders(),
+      params: { userId: getCurrentUserId() },
     });
+    return response;
   } catch (error) {
     console.error("获取文件夹内容失败", error);
     throw error;
@@ -95,10 +104,16 @@ export const createFolder = async (params: {
   // 生产环境使用实际 API
   const userId = getCurrentUserId();
   try {
-    return await myAxios.post("/folder/create", {
-      ...params,
-      userId,
-    });
+    const response = await axios.post(
+      buildApiPath("/folder/create"),
+      { ...params, userId },
+      { headers: getAuthHeaders() }
+    );
+
+    // 创建文件夹后触发更新事件
+    notifyFolderStructureChanged();
+
+    return response;
   } catch (error) {
     console.error("创建文件夹失败", error);
     throw error;
@@ -130,12 +145,17 @@ export const renameFolder = async (params: {
   }
 
   // 生产环境使用实际 API
-  const userId = getCurrentUserId();
   try {
-    return await myAxios.put("/folder/rename", {
-      ...params,
-      userId,
-    });
+    const response = await axios.put(
+      buildApiPath("/folder/rename"),
+      { ...params, userId: getCurrentUserId() },
+      { headers: getAuthHeaders() }
+    );
+
+    // 重命名后触发更新事件
+    notifyFolderStructureChanged();
+
+    return response;
   } catch (error) {
     console.error("重命名文件夹失败", error);
     throw error;
@@ -160,11 +180,16 @@ export const deleteFolder = async (folderId: string | number) => {
   }
 
   // 生产环境使用实际 API
-  const userId = getCurrentUserId();
   try {
-    return await myAxios.delete(`/folder/${folderId}`, {
-      params: { userId },
+    const response = await axios.delete(buildApiPath(`/folder/${folderId}`), {
+      headers: getAuthHeaders(),
+      params: { userId: getCurrentUserId() },
     });
+
+    // 删除文件夹后触发更新事件
+    notifyFolderStructureChanged();
+
+    return response;
   } catch (error) {
     console.error("删除文件夹失败", error);
     throw error;
@@ -212,56 +237,9 @@ export const uploadPdfFiles = async (files: File[], folderId?: string) => {
   }
 
   try {
-    return await myAxios.post("/upload/pdf", formData);
+    return await axios.post("/upload/pdf", formData);
   } catch (error) {
     console.error("上传PDF文件失败", error);
-    throw error;
-  }
-};
-
-/**
- * 搜索文库
- * @param query 搜索关键词
- * @param advancedParams 高级搜索参数
- * @returns Promise 包含搜索结果
- */
-export const searchLibrary = async (query: string, advancedParams?: any) => {
-  // 如果是开发环境，使用模拟数据
-  if (isDevelopment) {
-    console.log("[Dev Mode] 使用模拟数据搜索:", query, advancedParams);
-
-    // 获取模拟搜索结果
-    const results = searchResultData[query] || [];
-
-    // 如果有高级搜索参数，应用简单的过滤
-    if (advancedParams && Object.keys(advancedParams).length > 0) {
-      // 这里可以添加基于 advancedParams 的过滤逻辑
-      console.log("[Dev Mode] 应用高级搜索参数:", advancedParams);
-    }
-
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "搜索成功",
-        data: {
-          results,
-        },
-      },
-    });
-  }
-
-  // 生产环境使用实际 API
-  const userId = getCurrentUserId();
-  try {
-    return await myAxios.get("/search", {
-      params: {
-        q: query,
-        userId,
-        ...advancedParams,
-      },
-    });
-  } catch (error) {
-    console.error("搜索失败", error);
     throw error;
   }
 };
@@ -283,12 +261,13 @@ export const getFolderStructure = async () => {
     });
   }
 
-  // 生产环境使用实际 API
-  const userId = getCurrentUserId();
+  // 生产环境使用实际 API - 更新为正确的API路径
   try {
-    return await myAxios.get("/folder/tree", {
-      params: { userId },
+    const response = await axios.get(buildApiPath("/folder/tree"), {
+      headers: getAuthHeaders(),
+      params: { userId: getCurrentUserId() },
     });
+    return response;
   } catch (error) {
     console.error("获取文件夹结构失败", error);
     throw error;
@@ -314,12 +293,13 @@ export const getDocumentDetails = async (documentId: string | number) => {
     });
   }
 
-  // 生产环境使用实际 API
-  const userId = getCurrentUserId();
+  // 生产环境使用实际 API - 更新为正确的API路径
   try {
-    return await myAxios.get(`/document/${documentId}`, {
-      params: { userId },
+    const response = await axios.get(buildApiPath(`/document/${documentId}`), {
+      headers: getAuthHeaders(),
+      params: { userId: getCurrentUserId() },
     });
+    return response;
   } catch (error) {
     console.error("获取文档详情失败", error);
     throw error;
@@ -344,11 +324,15 @@ export const deleteDocument = async (documentId: string | number) => {
   }
 
   // 生产环境使用实际 API
-  const userId = getCurrentUserId();
   try {
-    return await myAxios.delete(`/document/${documentId}`, {
-      params: { userId },
-    });
+    const response = await axios.delete(
+      buildApiPath(`/document/${documentId}`),
+      {
+        headers: getAuthHeaders(),
+        params: { userId: getCurrentUserId() },
+      }
+    );
+    return response;
   } catch (error) {
     console.error("删除文档失败", error);
     throw error;
@@ -381,12 +365,13 @@ export const updateDocumentMetadata = async (
   }
 
   // 生产环境使用实际 API
-  const userId = getCurrentUserId();
   try {
-    return await myAxios.put(`/document/${documentId}/metadata`, {
-      ...metadata,
-      userId,
-    });
+    const response = await axios.put(
+      buildApiPath(`/document/${documentId}/metadata`),
+      { ...metadata, userId: getCurrentUserId() },
+      { headers: getAuthHeaders() }
+    );
+    return response;
   } catch (error) {
     console.error("更新文档元数据失败", error);
     throw error;
@@ -411,13 +396,61 @@ export const getUserStats = async () => {
   }
 
   // 生产环境使用实际 API
-  const userId = getCurrentUserId();
   try {
-    return await myAxios.get(`/user/stats`, {
-      params: { userId },
+    const response = await axios.get(buildApiPath(`/user/stats`), {
+      headers: getAuthHeaders(),
+      params: { userId: getCurrentUserId() },
     });
+    return response;
   } catch (error) {
     console.error("获取用户统计数据失败", error);
+    throw error;
+  }
+};
+
+/**
+ * 搜索文库
+ * @param query 搜索关键词
+ * @param advancedParams 高级搜索参数
+ * @returns Promise 包含搜索结果
+ */
+export const searchLibrary = async (query: string, advancedParams?: any) => {
+  // 如果是开发环境，使用模拟数据
+  if (isDevelopment) {
+    console.log("[Dev Mode] 使用模拟数据搜索:", query, advancedParams);
+
+    // 获取模拟搜索结果
+    const results = searchResultData[query] || [];
+
+    // 如果有高级搜索参数，应用简单的过滤
+    if (advancedParams && Object.keys(advancedParams).length > 0) {
+      console.log("[Dev Mode] 应用高级搜索参数:", advancedParams);
+    }
+
+    return Promise.resolve({
+      data: {
+        code: 0,
+        message: "搜索成功",
+        data: {
+          results,
+        },
+      },
+    });
+  }
+
+  // 生产环境使用实际 API
+  try {
+    const response = await axios.get(buildApiPath("/search"), {
+      headers: getAuthHeaders(),
+      params: {
+        q: query,
+        userId: getCurrentUserId(),
+        ...advancedParams,
+      },
+    });
+    return response;
+  } catch (error) {
+    console.error("搜索失败", error);
     throw error;
   }
 };

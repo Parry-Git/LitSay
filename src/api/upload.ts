@@ -1,8 +1,15 @@
-import { myAxios } from "@/request";
+import axios from "axios";
+import {
+  API_BASE_URL,
+  buildApiPath,
+  DEFAULT_REQUEST_CONFIG,
+  getAuthHeaders,
+} from "./config";
 import { getCurrentUserId } from "@/api/load";
+import { notifyFolderStructureChanged } from "@/services/EventService";
 
 // 判断是否为开发环境
-const isDevelopment = process.env.NODE_ENV === "development";
+const isDevelopment = process.env.NODE_ENV === "not";
 
 /**
  * 上传PDF文件和解析后的元数据
@@ -53,7 +60,21 @@ export const uploadPdfFiles = async (
   }
 
   try {
-    return await myAxios.post("/upload/pdf-with-metadata", formData);
+    const response = await axios.post(
+      buildApiPath("/upload/pdf-with-metadata"),
+      formData,
+      {
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    // 上传后触发更新事件
+    notifyFolderStructureChanged();
+
+    return response;
   } catch (error) {
     console.error("上传PDF文件失败", error);
     throw error;
@@ -98,7 +119,12 @@ export const parsePdfMetadata = async (file: File) => {
   formData.append("file", file);
 
   try {
-    const response = await myAxios.post("/parse/pdf", formData);
+    const response = await axios.post(buildApiPath("/parse/pdf"), formData, {
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response.data;
   } catch (error) {
     console.error("解析PDF文件失败", error);
@@ -112,11 +138,6 @@ export const parsePdfMetadata = async (file: File) => {
  * @returns Promise 包含解析后的元数据
  */
 export const parsePdfMetadataWithAI = async (file: File) => {
-  // 生产环境使用实际API
-  const formData = new FormData();
-  formData.append("file", file);
-  console.log("====上传的文件formData格式=====:", formData);
-
   // 如果是开发环境，使用模拟数据
   if (isDevelopment) {
     console.log("[Dev Mode] 模拟使用AI解析PDF文件元数据:", file.name);
@@ -155,11 +176,17 @@ export const parsePdfMetadataWithAI = async (file: File) => {
   }
 
   // 生产环境使用实际API
-  // const formData = new FormData();
-  // formData.append("file", file);
+  const formData = new FormData();
+  formData.append("file", file);
+  console.log("====上传的文件formData格式=====:", formData);
 
   try {
-    const response = await myAxios.post("/parse/pdf/ai", formData);
+    const response = await axios.post(buildApiPath("/parse/pdf/ai"), formData, {
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response.data;
   } catch (error) {
     console.error("AI解析PDF文件失败", error);
@@ -215,9 +242,76 @@ export const uploadMetadataFiles = async (
   }
 
   try {
-    return await myAxios.post("/upload/metadata", formData);
+    const response = await axios.post(
+      buildApiPath("/upload/metadata"),
+      formData,
+      {
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response;
   } catch (error) {
     console.error("上传元数据文件失败", error);
+    throw error;
+  }
+};
+
+/**
+ * 仅保存元数据（不上传PDF文件）
+ * @param metadataList 元数据列表
+ * @param folderId 目标文件夹ID
+ * @returns Promise
+ */
+export const saveMetadataOnly = async (
+  metadataList: Array<{ fileName: string; metadata: any }>,
+  folderId: string | number
+) => {
+  // 如果是开发环境，使用模拟数据
+  if (isDevelopment) {
+    console.log("[Dev Mode] 模拟保存元数据:", { metadataList, folderId });
+
+    // 模拟处理延迟
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // 返回模拟成功响应
+    return Promise.resolve({
+      data: {
+        code: 0,
+        message: `成功保存 ${metadataList.length} 条元数据记录`,
+        data: {
+          docIds: Array.from(
+            { length: metadataList.length },
+            (_, i) => i + 1000
+          ),
+          fileNames: metadataList.map((item) => item.fileName),
+        },
+      },
+    });
+  }
+
+  // 生产环境使用实际API
+  try {
+    const response = await axios.post(
+      buildApiPath("/upload/metadata-only"),
+      {
+        metadataList,
+        folderId,
+        userId: getCurrentUserId(),
+      },
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    // 保存元数据后触发更新事件
+    notifyFolderStructureChanged();
+
+    return response;
+  } catch (error) {
+    console.error("保存元数据失败", error);
     throw error;
   }
 };

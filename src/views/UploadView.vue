@@ -63,7 +63,6 @@
             :customRequest="customRequest"
             :show-preview-icon="true"
             :show-remove-icon="true"
-            @preview="handlePreview"
           >
             <p class="ant-upload-drag-icon">
               <inbox-outlined />
@@ -417,6 +416,7 @@ import {
   parsePdfMetadata,
   parsePdfMetadataWithAI,
   uploadMetadataFiles,
+  saveMetadataOnly,
 } from "@/api/upload";
 
 // 路由和导航
@@ -528,17 +528,15 @@ const customRequest = (options: any) => {
 };
 
 // 修改文件预览处理
-const handlePreview = async (file: any) => {
-  // 防止错误HTML显示，改为展示文件信息
-  if (file.url || file.thumbUrl) {
-    window.open(file.url || file.thumbUrl);
-  } else {
-    // 如果没有URL，显示文件信息
-    message.info(
-      `文件名: ${file.name}, 大小: ${(file.size / 1024 / 1024).toFixed(2)}MB`
-    );
-  }
-};
+// const handlePreview = async (file: any) => {
+//   if (file.url || file.thumbUrl) {
+//     window.open(file.url || file.thumbUrl);
+//   } else {
+//     message.info(
+//       `文件名: ${file.name}, 大小: ${(file.size / 1024 / 1024).toFixed(2)}MB`
+//     );
+//   }
+// };
 
 // 文件上传前验证
 function beforePdfUpload(file: File) {
@@ -610,7 +608,6 @@ async function handlePdfUpload() {
     const files = pdfFileList.value.map((file) => file.originFileObj);
 
     for (const file of files) {
-      console.log("=====解析文件=====", file);
       let result;
       if (parseMethod.value === "ai") {
         result = await parsePdfMetadataWithAI(file);
@@ -626,6 +623,7 @@ async function handlePdfUpload() {
           metadata: formatMetadata(result.metadata),
         });
       }
+      // console.log("解析结果：", parseResults);
     }
 
     // 关闭加载提示
@@ -648,7 +646,6 @@ async function handlePdfUpload() {
 
 // 格式化元数据，确保包含所有必要的字段
 function formatMetadata(metadata: any) {
-  // 确保必要的作者信息格式正确
   const authors = metadata.authors || [];
   const formattedAuthors =
     authors.map((author: string, index: number) => {
@@ -661,7 +658,6 @@ function formatMetadata(metadata: any) {
       };
     }) || [];
 
-  // 如果没有作者，添加一个空作者项
   if (formattedAuthors.length === 0) {
     formattedAuthors.push({
       name: "",
@@ -689,7 +685,6 @@ function formatMetadata(metadata: any) {
     journal: metadata.journal || null,
     conference: metadata.conference || null,
     keywords: metadata.keywords || [],
-    // 不包括 fileType, fileSize, abstract 字段
   };
 }
 
@@ -737,10 +732,7 @@ async function handleConfirmUpload() {
 
   try {
     // 将元数据从格式化后的对象转回API所需的格式
-    const filesToUpload = parseResults.value.map((result) => {
-      // 原始文件
-      const file = result.file;
-
+    const metadataToUpload = parseResults.value.map((result) => {
       // 处理 authors 数组和相关字段
       const metadata = { ...result.metadata };
       const authorsData = metadata.authors.map((a) => a.name);
@@ -754,7 +746,7 @@ async function handleConfirmUpload() {
 
       // 构建最终的元数据对象
       return {
-        file: file,
+        fileName: result.fileName, // 保存原始文件名
         metadata: {
           ...metadata,
           authors: authorsData,
@@ -766,9 +758,9 @@ async function handleConfirmUpload() {
       };
     });
 
-    // 调用API上传文件和元数据
-    const response = await uploadPdfFiles(
-      filesToUpload,
+    // 调用API只上传元数据
+    const response = await saveMetadataOnly(
+      metadataToUpload,
       selectedFolderId.value
     );
 
@@ -777,19 +769,19 @@ async function handleConfirmUpload() {
 
     // 显示上传结果
     uploadSuccess.value = true;
-    uploadResultMessage.value = response.data?.message || "文件上传成功";
-    uploadedFiles.value = filesToUpload.map((item) => item.file.name);
+    uploadResultMessage.value = response.data?.message || "元数据保存成功";
+    uploadedFiles.value = parseResults.value.map((item) => item.fileName);
     uploadResultVisible.value = true;
 
     // 清空文件列表
     pdfFileList.value = [];
   } catch (error) {
-    console.error("上传失败", error);
+    console.error("保存元数据失败", error);
     confirmLoading.value = false;
 
     // 显示错误结果
     uploadSuccess.value = false;
-    uploadResultMessage.value = "上传失败，请重试";
+    uploadResultMessage.value = "保存失败，请重试";
     uploadResultVisible.value = true;
   } finally {
     uploading.value = false;

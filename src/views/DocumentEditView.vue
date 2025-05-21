@@ -70,7 +70,7 @@
                     >通讯作者</a-select-option
                   >
                   <a-select-option value="additional">合作者</a-select-option>
-                  <a-select-option value="-">未知</a-select-option>
+                  <a-select-option value="other">其他</a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
@@ -192,17 +192,6 @@
             :token-separators="[',']"
           >
           </a-select>
-        </a-form-item>
-
-        <a-form-item label="上传时间" name="uploadTime">
-          <a-date-picker
-            v-model:value="documentForm.uploadTime"
-            placeholder="选择上传时间"
-            style="width: 100%"
-            format="YYYY-MM-DD HH:mm:ss"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            show-time
-          />
         </a-form-item>
 
         <a-form-item label="评分" name="stars">
@@ -332,7 +321,7 @@ const addAuthor = () => {
   documentForm.authors.push({
     key: Date.now(), // Unique key
     name: "",
-    sequence: "-",
+    sequence: "additional", // 更改默认值为 "additional"
     institution: "",
     location: "",
     email: "",

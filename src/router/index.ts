@@ -66,7 +66,14 @@ const router = createRouter({
 
 // 添加路由守卫
 router.beforeEach((to, from, next) => {
+  console.log("Navigating to:", to.path);
+  console.log("From:", from.path);
+  console.log("require or not:", to.meta.requiresAuth);
   const isAuthenticated = !!localStorage.getItem("token");
+
+  console.log("Token:", localStorage.getItem("token"));
+
+  console.log("Is authenticated:", isAuthenticated);
 
   // 需要登录但未登录时重定向到登录页
   if (to.meta.requiresAuth && !isAuthenticated) {

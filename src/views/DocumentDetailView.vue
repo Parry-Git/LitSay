@@ -6,7 +6,7 @@
           >返回</el-button
         >
       </div>
-      <h1 class="document-title">{{ document.title }}</h1>
+      <h1 class="document-title cormorant-font">{{ document.title }}</h1>
       <div class="document-actions">
         <el-button type="primary" size="small" @click="handleEdit">
           <el-icon><Edit /></el-icon>
@@ -199,7 +199,7 @@ let md = new MarkdownIt({
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const MarkdownItKatex = require("markdown-it-katex");
-  md = md.use(MarkdownItKatex); // 支持数学公式
+  md = md.use(MarkdownItKatex);
   console.log("KaTeX 支持已启用");
 } catch (e) {
   console.warn("未能加载 KaTeX 支持:", e);
@@ -266,9 +266,9 @@ const formattedAuthors = computed(() => {
 const getSequenceColor = (sequence) => {
   const colors = {
     first: "green",
-    corresponding: "red",
+    corresponding: "purple",
     additional: "blue",
-    "-": "default",
+    other: "default",
   };
   return colors[sequence] || "default";
 };
@@ -279,6 +279,7 @@ const getSequenceLabel = (sequence) => {
     first: "第一作者",
     corresponding: "通讯作者",
     additional: "合作者",
+    other: "其他",
     "-": "未知",
   };
   return labels[sequence] || sequence;
@@ -306,8 +307,8 @@ const fetchDocumentDetails = async () => {
       editedNote.value = document.value.note || "";
     } else if (response) {
       document.value = response;
-      documentStars.value = document.value.stars || 0;
-      editedNote.value = document.value.note || "";
+      documentStars.value = document.value.stars || 0; //
+      editedNote.value = document.value.note || ""; //
     }
   } catch (error) {
     console.error("获取文档详情失败", error);
@@ -335,8 +336,8 @@ const fetchDocumentDetails = async () => {
           journal: "IEEE Transactions on Neural Networks and Learning Systems",
           keywords: ["深度学习", "NLP", "神经网络", "人工智能"],
           fileUrl: "https://example.com/sample.pdf",
-          stars: 4,
-          note: "# 深度学习笔记\n\n这是一篇关于**深度学习**的笔记。\n\n## 主要内容\n1. 神经网络基础\n2. 循环神经网络\n3. 转换器模型",
+          stars: 4, // 确保模拟数据也有星级
+          note: "# 深度学习笔记\n\n这是一篇关于**深度学习**的笔记。\n\n## 主要内容\n1. 神经网络基础\n2. 循环神经网络\n3. 转换器模型", // 确保模拟数据有笔记
         };
         documentStars.value = document.value.stars || 0;
         editedNote.value = document.value.note || "";
@@ -414,6 +415,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap");
+
 .document-detail {
   padding: 20px;
 }
@@ -438,6 +441,14 @@ onMounted(() => {
   flex-basis: 100%;
   order: -1;
   margin-bottom: 10px;
+}
+
+.cormorant-font {
+  font-family: "Playfair Display", serif;
+  font-weight: 600;
+  font-size: 26px;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
 }
 
 .document-actions {

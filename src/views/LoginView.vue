@@ -271,13 +271,31 @@ const handleLogin = async () => {
 
     // 正常登录流程
     const response = await login(loginForm.username, loginForm.password);
+    console.log("登录响应数据:", response); // 打印响应数据，方便调试
+
+    // 确保 localStorage 中存储了 token 和用户信息
+    const token = response.token || response.data?.token;
+    const userData = response.user || response.data?.user;
+
+    if (token) {
+      localStorage.setItem("token", token);
+      console.log("Token 已存储:", token);
+    }
+
+    if (userData) {
+      localStorage.setItem("userInfo", JSON.stringify(userData));
+      console.log("用户信息已存储:", userData);
+    }
+
     message.success("登录成功");
 
     // 登录成功后将用户重定向到首页或指定页面
     const redirectPath = (route.query.redirect as string) || "/";
+    console.log("重定向到:", redirectPath);
     router.push(redirectPath);
   } catch (error: any) {
     message.error(error.message || "登录失败，请重试");
+    console.error("登录错误详情:", error);
   } finally {
     loading.value = false;
   }
