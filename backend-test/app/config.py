@@ -17,6 +17,10 @@ class Config:
 
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER')
 
+    @staticmethod
+    def init_app(app):
+        pass
+
     # SQLAlchemy
     # SQLALCHEMY_DATABASE_URI = f"mysql+mysqlconnector://{OB_USER}:{OB_PASSWORD}@{OB_HOST}:{OB_PORT}/{OB_DATABASE}"
     # SQLALCHEMY_TRACK_MODIFICATIONS = False

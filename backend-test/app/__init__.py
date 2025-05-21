@@ -8,12 +8,14 @@ import mysql.connector
 
 from .config import config
 from .db import init_app as init_db_app
+from .utils.helpers import success_response, error_response
 
 bcrypt = Bcrypt()
 
 def create_app(config_name='default'):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+    config[config_name].init_app(app)
 
     upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
     if not os.path.exists(upload_folder):
@@ -29,7 +31,7 @@ def create_app(config_name='default'):
     app.logger.info(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
 
     bcrypt.init_app(app)
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     init_db_app(app)
 
     # # Register blueprints
@@ -39,8 +41,21 @@ def create_app(config_name='default'):
     from .papers.routes import papers_bp
     app.register_blueprint(papers_bp, url_prefix='/api/papers')
 
-    # Basic root route for health check or API info
-    # curl --noproxy "127.0.0.1" http://127.0.0.1:5000/api/health
+    # TODO:
+    # from .folders.routes import folders_bp
+    # app.register_blueprint(folders_bp, url_prefix='/api/folder')
+
+    # from .documents.routes import documents_bp
+    # app.register_blueprint(documents_bp, url_prefix='/api/document')
+
+    # from .uploads.routes import uploads_bp
+    # app.register_blueprint(uploads_bp, url_prefix='/api/upload')
+
+    # from .search.routes import search_bp
+    # app.register_blueprint(search_bp, url_prefix='/api/search')
+
+
+    # Health Check
     @app.route('/api/health')
     def health_check():
         try:
@@ -53,45 +68,51 @@ def create_app(config_name='default'):
         except Exception as e:
             app.logger.error(f"Health check DB connection error: {e}")
             db_status = f"error: {e}"
-        return jsonify({
-            "status": "healthy",
-            "message": "Welcome to LitSay API!",
-            "database_status": db_status
-            })
+        return success_response(data={"status": "healthy", "message": "Welcome to LitSay API!", "database_status": db_status})
 
     # Global error handlers
-    @app.errorhandler(400)
+    @app.errorhandler(400) # Bad Request
     def bad_request_error(error):
-        return jsonify({"error": "Bad Request", "message": str(error.description if hasattr(error, 'description') else error)}), 400
-        
-    @app.errorhandler(401)
-    def unauthorized_error(error):
-        return jsonify({"error": "Unauthorized", "message": str(error.description if hasattr(error, 'description') else "Authentication is required and has failed or has not yet been provided.")}), 401
+        return error_response(message=getattr(error, 'description', "Bad Request"), status_code=400)
 
-    @app.errorhandler(403)
+    @app.errorhandler(401) # Unauthorized
+    def unauthorized_error(error):
+        return error_response(message=getattr(error, 'description', "Unauthorized"), status_code=401)
+
+    @app.errorhandler(403) # Forbidden
     def forbidden_error(error):
-        return jsonify({"error": "Forbidden", "message": str(error.description if hasattr(error, 'description') else "You don't have the permission to access the requested resource.")}), 403
+        return error_response(message=getattr(error, 'description', "Forbidden"), status_code=403)
 
     @app.errorhandler(404)
     def not_found_error(error):
-        return jsonify({"error": "Not Found", "message": str(error)}), 404
+        return error_response(message=getattr(error, 'description', "Not Found"), status_code=404)
 
     @app.errorhandler(405) # Method Not Allowed
     def method_not_allowed_error(error):
-        return jsonify({"error": "Method Not Allowed", "message": str(error.description if hasattr(error, 'description') else "The method is not allowed for the requested URL.")}), 405
-        
+        return error_response(message=getattr(error, 'description', "Method Not Allowed"), status_code=405)
+
     @app.errorhandler(409) # Conflict
     def conflict_error(error):
-        return jsonify({"error": "Conflict", "message": str(error.description if hasattr(error, 'description') else "A conflict occurred with the current state of the target resource.")}), 409
+        return error_response(message=getattr(error, 'description', "Conflict"), status_code=409)
 
     @app.errorhandler(500)
     def internal_error(error):
         app.logger.error(f"Server Error: {error}", exc_info=True)
-        return jsonify({"error": "Internal Server Error", "message": "An unexpected error occurred."}), 500
-    
-    @app.errorhandler(mysql.connector.Error) # Catch DB errors specifically
+        return error_response(message="Internal Server Error", status_code=500, error_details=str(error))
+
+
+    @app.errorhandler(mysql.connector.Error)
     def handle_db_error(error):
         app.logger.error(f"Database operation failed: {error}", exc_info=True)
-        return jsonify({"error": "Database Error", "message": "A database error occurred."}), 500
+        return error_response(message="Database Error", status_code=500, error_details=str(error))
+    
+    # TODO: (maybe)
+    # class AIParsingError(Exception):
+    #     pass
+    
+    # @app.errorhandler(AIParsingError)
+    # def handle_ai_parsing_error(error):
+    #     app.logger.error(f"AI Parsing Error: {error}", exc_info=True)
+    #     return error_response(message=str(error), status_code=500)
 
     return app

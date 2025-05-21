@@ -90,6 +90,7 @@ CREATE TABLE `document`
     `local_url`        VARCHAR(1024) NOT NULL,
     `publication_date` TIMESTAMP     NULL DEFAULT NULL,
     `create_time`      TIMESTAMP          DEFAULT CURRENT_TIMESTAMP,
+    `note`             TEXT               DEFAULT NULL,
     FOREIGN KEY (`user_id`)
         REFERENCES `user` (`user_id`)
         ON DELETE CASCADE ON UPDATE CASCADE,

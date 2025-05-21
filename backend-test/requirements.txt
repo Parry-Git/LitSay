@@ -7,3 +7,6 @@ PyJWT  # For JWT authentication
 pytest
 click
 Werkzeug
+PyMuPDF
+openpyxl
+pandas
