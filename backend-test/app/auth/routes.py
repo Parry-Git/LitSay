@@ -6,6 +6,7 @@ import datetime
 from . import auth_bp
 from app.db import query_db
 from app.utils.decorators import login_required
+from app.utils.helpers import success_response, error_response
 from app import bcrypt
 
 
@@ -25,19 +26,19 @@ def register():
     try:
         query_db("INSERT INTO user (user_name, password_hash) VALUES (%s, %s)",
                  (username, hashed_password), commit=True)
-        return jsonify({"message": "User registered successfully. Please login."}), 201
+        return success_response(data={"userId": user_id}, message="Registered successfully.", status_code=201)
     except Exception as e:
         current_app.logger.error(f"Registration error: {e}")
-        return jsonify({"error": "Server Error", "message": "Could not register user."}), 500
+        return error_response(message="Could not register user.", status_code=500, error_details=e)
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     if not data or not data.get('username') or not data.get('password'):
-        return jsonify({"error": "Validation Error", "message": "Username and password are required."}), 400
+        return error_response(message="Username and password are required.", status_code=400)
+
     username = data['username']
     password = data['password']
-
     user = query_db("SELECT user_id, user_name, password_hash, role FROM user WHERE user_name = %s", (username,), one=True)
 
     if user and bcrypt.check_password_hash(user['password_hash'], password):
@@ -48,18 +49,45 @@ def login():
             'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=current_app.config['JWT_EXPIRATION_DELTA_SECONDS'])
         }
         token = jwt.encode(token_payload, current_app.config['JWT_SECRET_KEY'], algorithm=current_app.config['JWT_ALGORITHM'])
-        return jsonify({"message": "Login successful.", "access_token": token, "user_id": user['user_id'], "username": user['user_name']}), 200
+        user_info = {"id": user['user_id'], "username": user['user_name'], "role": user['role']}
+        return success_response(data={"user": user_info, "token": token}, message="Login successful.")
     else:
-        return jsonify({"error": "Authentication Failed", "message": "Invalid username or password."}), 401
+        return error_response(message="Invalid username or password.", status_code=401)
 
-@auth_bp.route('/profile', methods=['GET'])
+@auth_bp.route('/logout', methods=['POST'])
 @login_required
-def profile():
-    # g.current_user is set by the @login_required decorator
-    return jsonify({
-        "user_id": g.current_user['user_id'],
+def logout():
+    # For JWT, logout is primarily handled by the client deleting the token.
+    return success_response(message="Logout successful.")
+
+@auth_bp.route('/current', methods=['GET'])
+@login_required
+def current_user_info():
+    # g.current_user is set by @login_required
+    user_data = {
+        "id": g.current_user['user_id'],
         "username": g.current_user['user_name'],
         "role": g.current_user['role']
-    }), 200
+    }
+    return success_response(data=user_data, message="Get user info successfully.")
 
-# add refresh token route or logout (client-side token invalidation)
+@auth_bp.route('/stats', methods=['GET'])
+@login_required
+def get_user_stats():
+    user_id = g.current_user['user_id']
+    try:
+        total_documents = query_db("SELECT COUNT(*) as count FROM document WHERE user_id = %s", (user_id,), one=True)['count']
+        total_folders = query_db("SELECT COUNT(*) as count FROM directory WHERE user_id = %s", (user_id,), one=True)['count']
+        # storage_used_mb = query_db("SELECT SUM(filesize_in_mb) FROM document_files WHERE user_id = %s", (user_id,), one=True)['sum']
+
+        stats = {
+            "totalDocuments": total_documents,
+            "totalFolders": total_folders,
+            # "storageUsedMb": storage_used_mb or 0,
+            "tagsCount": query_db("SELECT COUNT(DISTINCT keyword_id) as count FROM keyword WHERE user_id = %s", (user_id,), one=True)['count']
+        }
+        return success_response(data=stats, message="Get user stats successfully.")
+    except Exception as e:
+        current_app.logger.error(f"Error getting user stats: {e}", exc_info=True)
+        return error_response(message="Failed to retrieve user statistics.", status_code=500, error_details=e)
+
