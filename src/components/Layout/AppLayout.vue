@@ -221,35 +221,21 @@
       <!-- 侧边栏导航 -->
       <aside class="app-sidebar">
         <div class="new-button-container">
-          <el-button type="primary" class="new-button" @click="goToUpload">
-            <el-icon><Plus /></el-icon>
-            New
-          </el-button>
+          <a-button type="primary" class="new-button" @click="goToUpload">
+            <template #icon><plus-outlined /></template>
+            上传文献
+          </a-button>
         </div>
 
         <!-- 文件夹树形导航 -->
-        <FolderTree class="folder-tree" :data="folderTreeData" />
+        <FolderTree class="folder-tree" />
 
-        <!-- 快捷导航菜单 -->
-        <div class="quick-links">
-          <el-menu default-active="1" class="sidebar-menu">
-            <el-menu-item index="3">
-              <el-icon><Monitor /></el-icon>
-              <span>Computers</span>
-            </el-menu-item>
-            <el-menu-item index="4">
-              <el-icon><Share /></el-icon>
-              <span>Shared with me</span>
-            </el-menu-item>
-            <el-menu-item index="5">
-              <el-icon><Clock /></el-icon>
-              <span>Recent</span>
-            </el-menu-item>
-            <el-menu-item index="6">
-              <el-icon><Star /></el-icon>
-              <span>Starred</span>
-            </el-menu-item>
-          </el-menu>
+        <!-- 统计按钮 -->
+        <div class="stats-button-container">
+          <a-button class="stats-button" type="text" block @click="goToStats">
+            <template #icon><bar-chart-outlined /></template>
+            统计分析
+          </a-button>
         </div>
       </aside>
 
@@ -330,10 +316,6 @@ import { ElMessage } from "element-plus";
 import {
   Search,
   Plus,
-  Monitor,
-  Share,
-  Clock,
-  Star,
   Folder,
   Document,
   Loading,
@@ -345,12 +327,13 @@ import UserOutlined from "@ant-design/icons-vue/UserOutlined";
 import SettingOutlined from "@ant-design/icons-vue/SettingOutlined";
 import LogoutOutlined from "@ant-design/icons-vue/LogoutOutlined";
 import DownOutlined from "@ant-design/icons-vue/DownOutlined";
+import BarChartOutlined from "@ant-design/icons-vue/BarChartOutlined";
+import PlusOutlined from "@ant-design/icons-vue/PlusOutlined";
 
 import FolderTree from "@/components/FolderTree.vue";
-import { searchLibrary, getFolderStructure } from "@/api/load";
+import { searchLibrary } from "@/api/load";
 import { logout } from "@/api/auth";
 import { useEventBus } from "@vueuse/core";
-import { message } from "ant-design-vue"; // 添加message导入
 
 // 注册图标组件，使其在模板中可用
 const icons = {
@@ -358,6 +341,8 @@ const icons = {
   SettingOutlined,
   LogoutOutlined,
   DownOutlined,
+  BarChartOutlined,
+  PlusOutlined,
 };
 
 // 定义搜索结果类型
@@ -444,6 +429,11 @@ const getUserInfo = () => {
 // 添加导航到上传页面的方法
 const goToUpload = () => {
   router.push("/upload");
+};
+
+// 添加导航到统计页面的方法
+const goToStats = () => {
+  router.push("/stats");
 };
 
 // 处理回车键搜索
@@ -613,63 +603,15 @@ const handleLogout = async () => {
 // 编辑个人资料
 const handleEditProfile = () => {
   ElMessage.info("编辑个人资料功能开发中...");
-  // TODO: 实现编辑个人资料功能
 };
 
 // 修改密码
 const handleChangePassword = () => {
   ElMessage.info("修改密码功能开发中...");
-  // TODO: 实现修改密码功能
 };
 
 // 创建一个事件总线用于跨组件通信
 const folderChangedBus = useEventBus("folder-changed");
-
-// 侧栏中的文件夹树数据
-const folderTreeData = ref<any[]>([]);
-const loading = ref(false);
-
-// 获取文件夹树结构
-const fetchFolderTree = async () => {
-  if (!isLoggedIn.value) return;
-
-  loading.value = true;
-  try {
-    const response = await getFolderStructure();
-    if (response?.data?.code === 0) {
-      folderTreeData.value = response.data.data || [];
-      console.log("文件夹树结构已更新", folderTreeData.value);
-    } else {
-      console.error("获取文件夹结构失败", response?.data?.message);
-    }
-  } catch (error) {
-    console.error("获取文件夹结构错误:", error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 监听事件，当文件夹结构变化时刷新树
-onMounted(() => {
-  // 初始加载
-  fetchFolderTree();
-
-  // 监听文件夹变更事件
-  folderChangedBus.on(() => {
-    console.log("检测到文件夹结构变更，正在刷新...");
-    fetchFolderTree();
-  });
-});
-
-// 清理事件监听
-onUnmounted(() => {
-  folderChangedBus.off();
-});
-
-// 手动刷新树结构的方法（可选）
-const refreshFolderTree = () => {
-  fetchFolderTree();
-};
 
 // 组件挂载时获取用户信息
 onMounted(() => {
@@ -690,6 +632,8 @@ onUnmounted(() => {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Helvetica Neue", Arial, sans-serif;
 }
 
 .app-header {
@@ -698,12 +642,13 @@ onUnmounted(() => {
   padding: 8px 16px;
   border-bottom: 1px solid #e0e0e0;
   height: 64px;
+  background-color: #ffffff;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  width: 240px;
+  width: 220px;
 }
 
 .logo {
@@ -712,7 +657,7 @@ onUnmounted(() => {
 }
 
 .logo-text {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 500;
   margin-left: 8px;
 }
@@ -901,7 +846,7 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-/* 其他已有样式保持不变 */
+/* 侧边栏样式 */
 .app-main {
   display: flex;
   flex: 1;
@@ -909,82 +854,88 @@ onUnmounted(() => {
 }
 
 .app-sidebar {
-  width: 240px;
+  width: 220px;
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
-  padding-top: 16px;
+  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
 }
 
 .new-button-container {
-  padding: 0 16px 16px 16px;
+  padding: 16px 12px 8px;
 }
 
 .new-button {
   width: 100%;
-  border-radius: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.sidebar-menu {
-  border-right: none;
+  border-radius: 6px;
+  height: 36px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .folder-tree {
-  margin-bottom: 16px;
+  flex: 1;
+  margin-top: 8px;
 }
 
-.quick-links {
-  border-top: 1px solid #e0e0e0;
-  padding-top: 8px;
+/* 统计按钮容器 */
+.stats-button-container {
+  padding: 8px 12px 16px;
+  border-top: 1px solid #eaeaea;
+}
+
+.stats-button {
+  height: 40px;
+  text-align: left;
+  font-size: 14px;
+  color: #333;
+  transition: background-color 0.3s;
+}
+
+.stats-button:hover {
+  background-color: #e6f7ff;
+  color: #1890ff;
 }
 
 .app-content {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+  background-color: #ffffff;
+}
 
-  .el-menu-item {
-    height: 40px;
-    line-height: 40px;
-  }
+/* 高级搜索按钮样式 */
+.advanced-search-button {
+  margin-left: 5px;
+  color: #606266;
+}
 
-  /* 高级搜索按钮样式 */
+.advanced-search-button:hover {
+  color: #409eff;
+}
 
-  .advanced-search-button {
-    margin-left: 5px;
-    color: #606266;
-  }
+/* 高级搜索表单样式 */
+.advanced-search-form {
+  padding: 0 10px;
+}
 
-  .advanced-search-button:hover {
-    color: #409eff;
-  }
+.advanced-search-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
 
-  /* 高级搜索表单样式 */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 10px;
+}
 
-  .advanced-search-form {
-    padding: 0 10px;
-  }
-
-  .advanced-search-title {
-    font-size: 16px;
-    font-weight: 500;
-    color: #303133;
-    margin: 0 0 20px 0;
-    text-align: center;
-  }
-
-  .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 20px;
-    gap: 10px;
-  }
-
-  :deep(.advanced-search-popover) {
-    padding: 20px 0;
-  }
+:deep(.advanced-search-popover) {
+  padding: 20px 0;
 }
 </style>

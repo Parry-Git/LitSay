@@ -57,6 +57,16 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/SearchResultView.vue"),
     meta: { requiresAuth: true }, // 需要认证
   },
+  // 添加统计页面路由
+  {
+    path: "/stats",
+    name: "stats",
+    component: () => import("../views/StatsView.vue"),
+    meta: {
+      requiresAuth: true,
+      title: "统计",
+    },
+  },
 ];
 
 const router = createRouter({
