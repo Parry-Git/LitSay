@@ -27,49 +27,63 @@
             title: 'label',
             children: 'children',
           }"
-          show-icon
-          :switcherIcon="() => h(DownOutlined, { style: { fontSize: '10px' } })"
+          :show-icon="false"
         >
-          <template #icon="{ expanded }">
-            <folder-filled v-if="expanded" class="folder-icon folder-open" />
-            <folder-outlined v-else class="folder-icon folder-closed" />
-          </template>
-
-          <template #title="{ label, id }">
-            <span v-if="editingKey === id">
-              <a-input
-                v-model:value="editingName"
-                size="small"
-                style="width: 100px"
-                @pressEnter="handleRenameConfirm"
-                @blur="handleRenameCancel"
-                ref="editInput"
-              />
-            </span>
-            <span v-else class="tree-node-title">
-              {{ label }}
-              <div class="node-actions">
-                <a-dropdown :trigger="['click']">
-                  <more-outlined
-                    class="action-icon"
-                    @click.stop="onNodeActionClick"
-                  />
-                  <template #overlay>
-                    <a-menu @click="(e) => onMenuClick(e, id)">
-                      <a-menu-item key="rename">
-                        <edit-outlined /> 重命名
-                      </a-menu-item>
-                      <a-menu-item key="new">
-                        <folder-add-outlined /> 添加子文件夹
-                      </a-menu-item>
-                      <a-menu-item key="delete" danger>
-                        <delete-outlined /> 删除
-                      </a-menu-item>
-                    </a-menu>
-                  </template>
-                </a-dropdown>
-              </div>
-            </span>
+          <!-- 合并icon和title为自定义title插槽 -->
+          <template #title="{ label, id, expanded }">
+            <div class="tree-node-row">
+              <!-- 下拉箭头，旋转控制 -->
+              <span
+                class="tree-switcher"
+                :class="{ 'tree-switcher-open': expanded }"
+                @click.stop
+              >
+                <!-- <DownOutlined /> -->
+              </span>
+              <!-- 文件夹图标 -->
+              <span class="folder-icon-wrap">
+                <folder-filled
+                  v-if="expanded"
+                  class="folder-icon folder-open"
+                />
+                <folder-outlined v-else class="folder-icon folder-closed" />
+              </span>
+              <!-- 文件夹名称和操作 -->
+              <span v-if="editingKey === id">
+                <a-input
+                  v-model:value="editingName"
+                  size="small"
+                  style="width: 100px"
+                  @pressEnter="handleRenameConfirm"
+                  @blur="handleRenameCancel"
+                  ref="editInput"
+                />
+              </span>
+              <span v-else class="tree-node-title">
+                {{ label }}
+                <div class="node-actions">
+                  <a-dropdown :trigger="['click']">
+                    <more-outlined
+                      class="action-icon"
+                      @click.stop="onNodeActionClick"
+                    />
+                    <template #overlay>
+                      <a-menu @click="(e) => onMenuClick(e, id)">
+                        <a-menu-item key="rename">
+                          <edit-outlined /> 重命名
+                        </a-menu-item>
+                        <a-menu-item key="new">
+                          <folder-add-outlined /> 添加子文件夹
+                        </a-menu-item>
+                        <a-menu-item key="delete" danger>
+                          <delete-outlined /> 删除
+                        </a-menu-item>
+                      </a-menu>
+                    </template>
+                  </a-dropdown>
+                </div>
+              </span>
+            </div>
           </template>
         </a-tree>
         <a-empty v-else description="暂无文件夹" />
@@ -403,7 +417,36 @@ onUnmounted(() => {
   padding: 2px;
 }
 
-/* 设置文件夹图标颜色 */
+/* 新增：让图标和文字并排显示 */
+.tree-node-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 下拉箭头样式及旋转动画 */
+.tree-switcher {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 24px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  margin-right: 2px;
+  color: #bfbfbf;
+}
+.tree-switcher.tree-switcher-open {
+  transform: rotate(90deg);
+  color: #409eff;
+}
+
+/* 文件夹图标样式 */
+.folder-icon-wrap {
+  display: flex;
+  align-items: center;
+  margin-right: 2px;
+}
 .folder-icon {
   font-size: 14px;
 }
