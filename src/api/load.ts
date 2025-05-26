@@ -464,3 +464,169 @@ export const searchLibrary = async (query: string, advancedParams?: any) => {
     throw error;
   }
 };
+
+/**
+ * 获取作者详情
+ * @param authorId 作者ID
+ * @returns Promise 包含作者详情
+ */
+export const getAuthorDetails = async (authorId: string | number) => {
+  // 如果是开发环境，使用模拟数据
+  if (isDevelopment) {
+    console.log("[Dev Mode] 使用模拟数据获取作者详情:", authorId);
+    return Promise.resolve({
+      data: {
+        code: 0,
+        message: "获取成功",
+        data: {
+          id: authorId,
+          name: "作者示例",
+          email: "author@example.com",
+          institutions: [
+            {
+              institution_id: 1,
+              institution_name: "示例大学",
+              institution_location: "示例城市",
+            },
+          ],
+          documents: [
+            {
+              document_id: 1,
+              title: "示例文献1",
+              publication_date: "2023-01-01",
+              sequence: "first",
+              directory_name: "根文件夹",
+            },
+            {
+              document_id: 2,
+              title: "示例文献2",
+              publication_date: "2023-02-01",
+              sequence: "corresponding",
+              directory_name: "根文件夹",
+            },
+          ],
+          documentCount: 2,
+        },
+      },
+    });
+  }
+
+  // 生产环境使用实际API
+  try {
+    const response = await axios.get(buildApiPath(`/author/${authorId}`), {
+      headers: getAuthHeaders(),
+      params: { userId: getCurrentUserId() },
+    });
+    return response;
+  } catch (error) {
+    console.error("获取作者详情失败", error);
+    throw error;
+  }
+};
+
+/**
+ * 获取机构详情
+ * @param institutionId 机构ID
+ * @returns Promise 包含机构详情
+ */
+export const getInstitutionDetails = async (institutionId: string | number) => {
+  // 如果是开发环境，使用模拟数据
+  if (isDevelopment) {
+    console.log("[Dev Mode] 使用模拟数据获取机构详情:", institutionId);
+    return Promise.resolve({
+      data: {
+        code: 0,
+        message: "获取成功",
+        data: {
+          id: institutionId,
+          name: "示例机构",
+          location: "示例地址",
+          authors: [
+            {
+              author_id: 1,
+              author_name: "作者1",
+              author_email: "author1@example.com",
+            },
+            {
+              author_id: 2,
+              author_name: "作者2",
+              author_email: "author2@example.com",
+            },
+          ],
+          authorCount: 2,
+        },
+      },
+    });
+  }
+
+  // 生产环境使用实际API
+  try {
+    const response = await axios.get(
+      buildApiPath(`/institution/${institutionId}`),
+      {
+        headers: getAuthHeaders(),
+        params: { userId: getCurrentUserId() },
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("获取机构详情失败", error);
+    throw error;
+  }
+};
+
+/**
+ * 获取容器（期刊/会议）详情
+ * @param containerId 容器ID
+ * @returns Promise 包含容器详情及相关文献
+ */
+export const getContainerDetails = async (containerId: string | number) => {
+  // 如果是开发环境，使用模拟数据
+  if (isDevelopment) {
+    console.log("[Dev Mode] 使用模拟数据获取容器详情:", containerId);
+    return Promise.resolve({
+      data: {
+        code: 0,
+        message: "获取成功",
+        data: {
+          id: containerId,
+          name: "示例期刊/会议",
+          type: Math.random() > 0.5 ? "journal" : "conference",
+          journalIssue: "Vol. 1, Issue 2",
+          conferenceTime: "2023-05-15",
+          conferenceLocation: "上海",
+          documents: [
+            {
+              document_id: 1,
+              title: "示例文献1",
+              publication_date: "2023-01-01",
+              directory_name: "根文件夹",
+            },
+            {
+              document_id: 2,
+              title: "示例文献2",
+              publication_date: "2023-02-01",
+              directory_name: "根文件夹",
+            },
+          ],
+          documentCount: 2,
+        },
+      },
+    });
+  }
+
+  // 生产环境使用实际API
+  try {
+    const response = await axios.get(
+      buildApiPath(`/container/${containerId}`),
+      {
+        headers: getAuthHeaders(),
+        params: { userId: getCurrentUserId() },
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("获取容器详情失败", error);
+    throw error;
+  }
+};

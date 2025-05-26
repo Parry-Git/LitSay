@@ -1,401 +1,386 @@
 <template>
-  <div class="document-detail">
-    <div class="document-header">
-      <div class="back-button">
-        <el-button @click="goBack" icon="ArrowLeft" size="small"
-          >返回</el-button
-        >
-      </div>
-      <h1 class="document-title cormorant-font">{{ document.title }}</h1>
-      <div class="document-actions">
-        <el-button type="primary" size="small" @click="handleEdit">
-          <el-icon><Edit /></el-icon>
-          编辑元数据
-        </el-button>
-      </div>
-    </div>
-
-    <el-divider />
-
-    <div v-if="loading" class="loading-container">
-      <el-skeleton :rows="10" animated />
-    </div>
-
-    <div v-else class="document-content">
-      <!-- 使用Ant Design Vue的标签页组件 -->
-      <a-tabs default-active-key="1">
-        <a-tab-pane key="1" tab="基本信息">
-          <a-descriptions
-            title="文献信息"
-            bordered
-            :column="{ xxl: 3, xl: 3, lg: 3, md: 3, sm: 2, xs: 1 }"
-          >
-            <a-descriptions-item label="标题" :span="3">
-              {{ document.title }}
-            </a-descriptions-item>
-
-            <!-- 作者信息 -->
-            <a-descriptions-item label="作者信息" :span="3">
-              <div class="authors-table">
-                <a-table
-                  :dataSource="formattedAuthors"
-                  :columns="authorColumns"
-                  :pagination="false"
-                  size="small"
-                  bordered
-                >
-                  <template #bodyCell="{ column, record }">
-                    <template v-if="column.dataIndex === 'sequence'">
-                      <a-tag :color="getSequenceColor(record.sequence)">
-                        {{ getSequenceLabel(record.sequence) }}
-                      </a-tag>
-                    </template>
-                  </template>
-                </a-table>
-              </div>
-            </a-descriptions-item>
-
-            <a-descriptions-item label="出版日期">
-              {{ document.publishDate || "未知" }}
-            </a-descriptions-item>
-
-            <a-descriptions-item label="DOI">
-              <a
-                v-if="document.doi"
-                :href="`https://doi.org/${document.doi}`"
-                target="_blank"
-                >{{ document.doi }}</a
-              >
-              <span v-else>未知</span>
-            </a-descriptions-item>
-
-            <a-descriptions-item label="上传时间">
-              {{ document.uploadTime || "未知" }}
-            </a-descriptions-item>
-
-            <!-- 期刊信息 -->
-            <a-descriptions-item v-if="document.journal" label="期刊" :span="3">
-              {{ document.journal }}
-            </a-descriptions-item>
-
-            <!-- 会议信息 -->
-            <a-descriptions-item
-              v-if="document.conference"
-              label="会议"
-              :span="3"
-            >
-              {{ document.conference }}
-            </a-descriptions-item>
-
-            <a-descriptions-item label="关键词" :span="3">
-              <a-tag
-                v-for="(keyword, index) in document.keywords"
-                :key="index"
-                color="blue"
-                class="keyword-tag"
-              >
-                {{ keyword }}
-              </a-tag>
-              <span v-if="!document.keywords || document.keywords.length === 0"
-                >无关键词</span
-              >
-            </a-descriptions-item>
-
-            <a-descriptions-item label="评分" :span="3">
-              <a-rate
-                v-model:value="documentStars"
-                :disabled="!editingStars"
-                @click="saveRating"
-              />
-              <a-button type="link" size="small" @click="toggleEditStars">
-                {{ editingStars ? "保存" : "编辑" }}
-              </a-button>
-            </a-descriptions-item>
-          </a-descriptions>
-        </a-tab-pane>
-
-        <a-tab-pane key="2" tab="阅读笔记">
-          <div class="notes-container">
-            <div v-if="document.note" class="markdown-content">
-              <div v-html="renderedNote"></div>
-            </div>
-            <a-empty v-else description="暂无阅读笔记" />
-
-            <div class="notes-actions">
-              <a-button type="primary" @click="toggleEditNote">
-                {{ editingNote ? "保存笔记" : "编辑笔记" }}
-              </a-button>
-            </div>
-
-            <!-- 编辑笔记的文本区域 -->
-            <a-modal
-              v-model:visible="editingNote"
-              title="编辑阅读笔记"
-              width="800px"
-              @ok="saveNote"
-            >
-              <a-tabs default-active-key="edit">
-                <a-tab-pane key="edit" tab="编辑">
-                  <a-textarea
-                    v-model:value="editedNote"
-                    :rows="20"
-                    placeholder="使用Markdown语法编写笔记"
-                  />
-                </a-tab-pane>
-                <a-tab-pane key="preview" tab="预览">
-                  <div
-                    class="markdown-preview"
-                    v-html="renderedEditedNote"
-                  ></div>
-                </a-tab-pane>
-              </a-tabs>
-
-              <template #footer>
-                <a-button key="back" @click="cancelEditNote">取消</a-button>
-                <a-button key="submit" type="primary" @click="saveNote"
-                  >保存</a-button
-                >
-              </template>
-            </a-modal>
+  <div class="document-detail-container">
+    <!-- 笔记编辑对话框 - 移到条件渲染链外部 -->
+    <a-modal
+      v-model:visible="showNoteEditor"
+      title="编辑笔记"
+      width="800px"
+      @ok="saveNote"
+      :okButtonProps="{ loading: savingNote }"
+    >
+      <a-tabs v-model:activeKey="noteTabActiveKey">
+        <a-tab-pane key="edit" tab="编辑">
+          <a-textarea
+            v-model:value="editingNoteContent"
+            :rows="15"
+            placeholder="支持Markdown格式..."
+          />
+          <div class="markdown-tips">
+            <p>支持Markdown格式，例如：</p>
+            <ul>
+              <li># 一级标题</li>
+              <li>**粗体**</li>
+              <li>*斜体*</li>
+              <li>- 列表项</li>
+              <li>[链接](http://example.com)</li>
+            </ul>
           </div>
         </a-tab-pane>
-
-        <!-- <a-tab-pane key="3" tab="文件预览">
-          <div class="pdf-container">
-            <a-empty
-              v-if="!document.fileUrl"
-              description="暂无预览"
-              image="https://gw.alipayobjects.com/zos/antfincdn/ZHrcdLPrvN/empty.svg"
-            />
-            <iframe
-              v-else
-              :src="document.fileUrl"
-              width="100%"
-              height="600px"
-              frameborder="0"
-            ></iframe>
-          </div>
-        </a-tab-pane> -->
+        <a-tab-pane key="preview" tab="预览">
+          <div class="note-preview" v-html="renderedEditingNote"></div>
+        </a-tab-pane>
       </a-tabs>
+    </a-modal>
+
+    <!-- 条件渲染链保持完整 -->
+    <!-- 加载中状态 -->
+    <div v-if="loading" class="loading-container">
+      <a-spin size="large" />
     </div>
+
+    <!-- 文档详情内容 -->
+    <div v-else-if="documentData" class="document-content">
+      <!-- 文档标题和操作栏 -->
+      <div class="document-header">
+        <h1 class="document-title">{{ documentData.title }}</h1>
+        <div class="document-actions">
+          <a-button type="primary" @click="handleEdit">编辑</a-button>
+          <a-button type="danger" @click="confirmDelete">删除</a-button>
+        </div>
+      </div>
+
+      <!-- 基本信息卡片 -->
+      <a-card class="info-card">
+        <a-row :gutter="[16, 24]">
+          <!-- 评星功能 - 移动到作者信息之前 -->
+          <a-col :span="24">
+            <div class="info-section">
+              <h3 class="section-title">
+                <star-outlined class="section-icon" /> 评分
+              </h3>
+              <div class="stars-container">
+                <a-rate v-model:value="stars" @change="handleStarsChange" />
+                <a-button
+                  type="link"
+                  size="small"
+                  @click="saveStars"
+                  :loading="savingStars"
+                  v-if="starsChanged"
+                >
+                  保存评分
+                </a-button>
+              </div>
+            </div>
+          </a-col>
+
+          <!-- 作者信息部分 - 改为列表，每位作者可点击 -->
+          <a-col :span="24">
+            <div class="info-section">
+              <h3 class="section-title">
+                <team-outlined class="section-icon" /> 作者
+              </h3>
+              <div class="authors-list">
+                <a-tag
+                  v-for="(author, index) in documentData.authors"
+                  :key="index"
+                  class="author-tag clickable"
+                  :color="getAuthorColor(documentData.sequence?.[index])"
+                  @click="navigateToAuthor(index)"
+                >
+                  {{ author }}
+                  <small
+                    v-if="documentData.sequence?.[index]"
+                    class="author-role"
+                  >
+                    ({{ formatAuthorRole(documentData.sequence[index]) }})
+                  </small>
+                </a-tag>
+              </div>
+            </div>
+          </a-col>
+
+          <!-- 期刊/会议信息 - 添加点击跳转 -->
+          <a-col :span="12" v-if="documentData.journal">
+            <div class="info-section">
+              <h3 class="section-title">
+                <book-outlined class="section-icon" /> 期刊
+              </h3>
+              <a class="journal-name clickable" @click="navigateToJournal()">
+                {{ documentData.journal }}
+              </a>
+            </div>
+          </a-col>
+
+          <a-col :span="12" v-if="documentData.conference">
+            <div class="info-section">
+              <h3 class="section-title">
+                <global-outlined class="section-icon" /> 会议
+              </h3>
+              <a
+                class="conference-name clickable"
+                @click="navigateToConference()"
+              >
+                {{ documentData.conference }}
+              </a>
+            </div>
+          </a-col>
+
+          <!-- DOI信息 -->
+          <a-col :span="12" v-if="documentData.doi">
+            <div class="info-section">
+              <h3 class="section-title">
+                <number-outlined class="section-icon" /> DOI
+              </h3>
+              <a
+                :href="`https://doi.org/${documentData.doi}`"
+                target="_blank"
+                class="doi-link"
+              >
+                {{ documentData.doi }}
+              </a>
+            </div>
+          </a-col>
+
+          <!-- 发布日期 -->
+          <a-col :span="12" v-if="documentData.publishDate">
+            <div class="info-section">
+              <h3 class="section-title">
+                <calendar-outlined class="section-icon" /> 发布日期
+              </h3>
+              <p>{{ formatDate(documentData.publishDate) }}</p>
+            </div>
+          </a-col>
+
+          <!-- 文件夹位置 -->
+          <a-col :span="12" v-if="documentData.folderName">
+            <div class="info-section">
+              <h3 class="section-title">
+                <folder-outlined class="section-icon" /> 文件夹
+              </h3>
+              <router-link
+                :to="`/folder/${documentData.folderId}`"
+                class="folder-link"
+              >
+                {{ documentData.folderName }}
+              </router-link>
+            </div>
+          </a-col>
+
+          <!-- 关键词列表 -->
+          <a-col
+            :span="24"
+            v-if="documentData.keywords && documentData.keywords.length"
+          >
+            <div class="info-section">
+              <h3 class="section-title">
+                <tags-outlined class="section-icon" /> 关键词
+              </h3>
+              <div class="keywords-list">
+                <a-tag
+                  v-for="(keyword, index) in documentData.keywords"
+                  :key="index"
+                >
+                  {{ keyword }}
+                </a-tag>
+              </div>
+            </div>
+          </a-col>
+
+          <!-- 上传时间 -->
+          <a-col :span="24" v-if="documentData.uploadTime">
+            <div class="meta-info">
+              上传于: {{ formatDate(documentData.uploadTime, true) }}
+            </div>
+          </a-col>
+        </a-row>
+      </a-card>
+
+      <!-- 笔记部分 -->
+      <div class="notes-section">
+        <h2 class="section-header">
+          笔记
+          <a-button
+            type="primary"
+            size="small"
+            @click="showNoteEditor = true"
+            style="margin-left: 12px"
+          >
+            编辑笔记
+          </a-button>
+        </h2>
+        <a-card class="note-card">
+          <div
+            v-if="documentData.note"
+            class="note-content"
+            v-html="renderedNote"
+          ></div>
+          <a-empty v-else description="暂无笔记" />
+        </a-card>
+      </div>
+
+      <!-- 文件预览部分 - 如果有的话 -->
+      <div class="preview-section" v-if="documentData.local_url">
+        <h2 class="section-header">文档预览</h2>
+        <div class="preview-container">
+          <iframe
+            v-if="isPdfUrl(documentData.local_url)"
+            :src="`${baseUrl}/uploads/${documentData.local_url}`"
+            class="pdf-preview"
+          ></iframe>
+          <div v-else class="preview-placeholder">
+            <file-pdf-outlined class="pdf-icon" />
+            <p>此文档类型无法预览</p>
+            <a-button
+              type="primary"
+              :href="`${baseUrl}/uploads/${documentData.local_url}`"
+              target="_blank"
+            >
+              打开文档
+            </a-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 加载失败状态 -->
+    <a-result
+      v-else
+      status="error"
+      title="加载失败"
+      sub-title="无法获取文档详情信息"
+    >
+      <template #extra>
+        <a-button type="primary" @click="fetchDocumentData">重试</a-button>
+        <a-button @click="goBack">返回</a-button>
+      </template>
+    </a-result>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
-import { ArrowLeft, Edit, Download } from "@element-plus/icons-vue";
-import { getDocumentDetails, updateDocumentMetadata } from "@/api/load";
+import { message, Modal } from "ant-design-vue";
 import MarkdownIt from "markdown-it";
+import {
+  FileOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  BookOutlined,
+  TeamOutlined,
+  GlobalOutlined,
+  NumberOutlined,
+  CalendarOutlined,
+  TagsOutlined,
+  FolderOutlined,
+  FilePdfOutlined,
+  StarOutlined,
+} from "@ant-design/icons-vue";
 
-// 尝试导入 markdown-it-katex，如果失败则忽略数学公式支持
-let md = new MarkdownIt({
+import {
+  getDocumentDetails,
+  deleteDocument,
+  updateDocumentMetadata,
+} from "@/api/load";
+import { API_BASE_URL } from "@/api/config";
+
+const route = useRoute();
+const router = useRouter();
+const loading = ref(true);
+const documentData = ref<any>(null);
+const baseUrl = API_BASE_URL || "";
+
+// 评星相关状态
+const stars = ref(0);
+const initialStars = ref(0);
+const starsChanged = computed(() => stars.value !== initialStars.value);
+const savingStars = ref(false);
+
+// 笔记相关状态
+const showNoteEditor = ref(false);
+const editingNoteContent = ref("");
+const noteTabActiveKey = ref("edit");
+const savingNote = ref(false);
+
+// Markdown 解析器
+const md = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true,
 });
 
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const MarkdownItKatex = require("markdown-it-katex");
-  md = md.use(MarkdownItKatex);
-  console.log("KaTeX 支持已启用");
-} catch (e) {
-  console.warn("未能加载 KaTeX 支持:", e);
-}
+// 渲染 Markdown 笔记
+const renderedNote = computed(() => {
+  if (!documentData.value?.note) return "";
+  return md.render(documentData.value.note);
+});
 
-const route = useRoute();
-const router = useRouter();
-const loading = ref(true);
-const documentId = ref(route.params.id);
-const document = ref<any>({});
-const documentStars = ref(0);
-const editingStars = ref(false);
-const editingNote = ref(false);
-const editedNote = ref("");
+// 渲染编辑中的笔记预览
+const renderedEditingNote = computed(() => {
+  if (!editingNoteContent.value) return "";
+  return md.render(editingNoteContent.value);
+});
 
-// 定义作者表格列
-const authorColumns = [
-  {
-    title: "姓名",
-    dataIndex: "name",
-    key: "name",
-  },
-  {
-    title: "角色",
-    dataIndex: "sequence",
-    key: "sequence",
-  },
-  {
-    title: "机构",
-    dataIndex: "institution",
-    key: "institution",
-  },
-  {
-    title: "所在地",
-    dataIndex: "location",
-    key: "location",
-  },
-  {
-    title: "联系方式",
-    dataIndex: "email",
-    key: "email",
-  },
-];
-
-// 格式化作者信息
-const formattedAuthors = computed(() => {
-  if (!document.value.authors || !document.value.authors.length) {
-    return [];
+// 获取文档数据
+const fetchDocumentData = async () => {
+  const documentId = route.params.id;
+  if (!documentId) {
+    message.error("文档ID无效");
+    return;
   }
 
-  return document.value.authors.map((author, index) => {
-    return {
-      key: index,
-      name: author || "-",
-      sequence: document.value.sequence?.[index] || "-",
-      institution: document.value.institutions?.[index] || "-",
-      location: document.value.institution_location?.[index] || "-",
-      email: document.value.email?.[index] || "-",
-    };
-  });
-});
-
-// 获取作者角色标签颜色
-const getSequenceColor = (sequence) => {
-  const colors = {
-    first: "green",
-    corresponding: "purple",
-    additional: "blue",
-    other: "default",
-  };
-  return colors[sequence] || "default";
-};
-
-// 获取作者角色标签文本
-const getSequenceLabel = (sequence) => {
-  const labels = {
-    first: "第一作者",
-    corresponding: "通讯作者",
-    additional: "合作者",
-    other: "其他",
-    "-": "未知",
-  };
-  return labels[sequence] || sequence;
-};
-
-// 渲染笔记
-const renderedNote = computed(() => {
-  return document.value.note ? md.render(document.value.note) : "";
-});
-
-// 预览编辑中的笔记
-const renderedEditedNote = computed(() => {
-  return editedNote.value ? md.render(editedNote.value) : "";
-});
-
-// 获取文档详情
-const fetchDocumentDetails = async () => {
   loading.value = true;
   try {
-    const response = await getDocumentDetails(documentId.value);
+    const response = await getDocumentDetails(documentId);
+    if (response.data && response.data.code === 0) {
+      documentData.value = response.data.data;
+      document.title = `${documentData.value.title} - LitSay`;
 
-    if (response && response.data && response.data.data) {
-      document.value = response.data.data;
-      documentStars.value = document.value.stars || 0;
-      editedNote.value = document.value.note || "";
-    } else if (response) {
-      document.value = response;
-      documentStars.value = document.value.stars || 0; //
-      editedNote.value = document.value.note || ""; //
+      // 初始化评星
+      stars.value = documentData.value.stars || 0;
+      initialStars.value = stars.value;
+
+      // 初始化笔记内容
+      editingNoteContent.value = documentData.value.note || "";
+    } else {
+      message.error(response.data?.message || "获取文档详情失败");
     }
   } catch (error) {
-    console.error("获取文档详情失败", error);
-    ElMessage.error("获取文档详情失败");
-
-    // 开发环境下使用模拟数据
-    if (process.env.NODE_ENV === "development") {
-      // 简单模拟数据
-      setTimeout(() => {
-        document.value = {
-          id: documentId.value,
-          title: "深度学习在自然语言处理中的应用研究",
-          authors: ["张三", "李四", "王五"],
-          sequence: ["first", "corresponding", "additional"],
-          institutions: ["北京大学", "清华大学", null],
-          institution_location: ["北京, 中国", "北京, 中国", null],
-          email: ["zhangsan@pku.edu.cn", "lisi@tsinghua.edu.cn", null],
-          abstract:
-            "本文探讨了深度学习技术在自然语言处理领域的最新应用和进展...",
-          publishDate: "2023-06-15",
-          fileType: "PDF",
-          fileSize: "2.3 MB",
-          uploadTime: "2023-10-20 14:30:22",
-          conference: null,
-          journal: "IEEE Transactions on Neural Networks and Learning Systems",
-          keywords: ["深度学习", "NLP", "神经网络", "人工智能"],
-          fileUrl: "https://example.com/sample.pdf",
-          stars: 4, // 确保模拟数据也有星级
-          note: "# 深度学习笔记\n\n这是一篇关于**深度学习**的笔记。\n\n## 主要内容\n1. 神经网络基础\n2. 循环神经网络\n3. 转换器模型", // 确保模拟数据有笔记
-        };
-        documentStars.value = document.value.stars || 0;
-        editedNote.value = document.value.note || "";
-      }, 500);
-    }
+    console.error("获取文档详情出错", error);
+    message.error("获取文档详情失败，请稍后重试");
   } finally {
     loading.value = false;
   }
 };
 
-// 切换星级编辑状态
-const toggleEditStars = () => {
-  editingStars.value = !editingStars.value;
-  if (!editingStars.value) {
-    saveRating();
-  }
+// 编辑文档
+const handleEdit = () => {
+  router.push(`/document/${route.params.id}/edit`);
 };
 
-// 保存评分
-const saveRating = async () => {
-  try {
-    await updateDocumentMetadata(documentId.value, {
-      stars: documentStars.value,
-    });
-    document.value.stars = documentStars.value;
-    ElMessage.success("评分已保存");
-    editingStars.value = false;
-  } catch (error) {
-    console.error("保存评分失败", error);
-    ElMessage.error("保存评分失败");
-  }
-};
-
-// 切换笔记编辑状态
-const toggleEditNote = () => {
-  editingNote.value = !editingNote.value;
-  editedNote.value = document.value.note || "";
-};
-
-// 取消编辑笔记
-const cancelEditNote = () => {
-  editingNote.value = false;
-  editedNote.value = document.value.note || "";
-};
-
-// 保存笔记
-const saveNote = async () => {
-  try {
-    await updateDocumentMetadata(documentId.value, {
-      note: editedNote.value,
-    });
-    document.value.note = editedNote.value;
-    ElMessage.success("笔记已保存");
-    editingNote.value = false;
-  } catch (error) {
-    console.error("保存笔记失败", error);
-    ElMessage.error("保存笔记失败");
-  }
+// 确认删除
+const confirmDelete = () => {
+  Modal.confirm({
+    title: "确认删除",
+    content: "删除后数据无法恢复，确认继续吗？",
+    okText: "删除",
+    okType: "danger",
+    cancelText: "取消",
+    onOk: async () => {
+      try {
+        const response = await deleteDocument(route.params.id);
+        if (response.data && response.data.code === 0) {
+          message.success("文档已删除");
+          router.replace(`/folder/${documentData.value.folderId}`);
+        } else {
+          message.error(response.data?.message || "删除文档失败");
+        }
+      } catch (error) {
+        console.error("删除文档出错", error);
+        message.error("删除文档失败，请稍后重试");
+      }
+    },
+  });
 };
 
 // 返回上一页
@@ -403,52 +388,170 @@ const goBack = () => {
   router.back();
 };
 
-// 编辑元数据
-const handleEdit = () => {
-  router.push(`/document/${documentId.value}/edit`);
+// 处理评星变更
+const handleStarsChange = (value) => {
+  console.log("评星变更为:", value);
+  stars.value = value;
 };
 
-// 组件挂载时获取文档详情
+// 保存评星
+const saveStars = async () => {
+  console.log("保存评星:", stars.value);
+  savingStars.value = true;
+  try {
+    await updateDocumentMetadata(route.params.id, { stars: stars.value });
+    message.success("评分已保存");
+    initialStars.value = stars.value; // 更新初始值，使starsChanged计算属性返回false
+  } catch (error) {
+    console.error("保存评分失败", error);
+    message.error("保存评分失败，请稍后重试");
+  } finally {
+    savingStars.value = false;
+  }
+};
+
+// 保存笔记
+const saveNote = async () => {
+  console.log("保存笔记");
+  savingNote.value = true;
+  try {
+    await updateDocumentMetadata(route.params.id, {
+      note: editingNoteContent.value,
+    });
+    documentData.value.note = editingNoteContent.value;
+    message.success("笔记已保存");
+    showNoteEditor.value = false;
+  } catch (error) {
+    console.error("保存笔记失败", error);
+    message.error("保存笔记失败，请稍后重试");
+  } finally {
+    savingNote.value = false;
+  }
+};
+
+// 添加新的导航函数，并包含调试输出
+const navigateToAuthor = (index: number) => {
+  console.log(
+    "点击作者:",
+    documentData.value?.authors?.[index],
+    "索引:",
+    index
+  );
+
+  // 直接从author_ids数组获取作者ID
+  const authorId = documentData.value?.author_ids?.[index];
+
+  if (authorId) {
+    console.log("导航到作者详情页:", authorId);
+    router.push(`/author/${authorId}`);
+  } else {
+    console.log("未找到作者ID");
+    message.info("作者详情暂无法访问");
+  }
+};
+
+const navigateToJournal = () => {
+  console.log("点击期刊:", documentData.value?.journal);
+
+  // 使用container_id而不是在document对象上查找
+  const containerId = documentData.value?.container_id;
+  if (containerId && documentData.value?.journal) {
+    console.log("导航到期刊详情页:", containerId);
+    router.push(`/journal/${containerId}`);
+  } else {
+    console.log("未找到容器ID");
+    message.info("期刊详情暂无法访问");
+  }
+};
+
+const navigateToConference = () => {
+  console.log("点击会议:", documentData.value?.conference);
+
+  // 使用container_id而不是在document对象上查找
+  const containerId = documentData.value?.container_id;
+  if (containerId && documentData.value?.conference) {
+    console.log("导航到会议详情页:", containerId);
+    router.push(`/conference/${containerId}`);
+  } else {
+    console.log("未找到容器ID");
+    message.info("会议详情暂无法访问");
+  }
+};
+
+// 格式化作者角色
+const formatAuthorRole = (role: string) => {
+  const roleMap: { [key: string]: string } = {
+    first: "第一作者",
+    corresponding: "通讯作者",
+    additional: "合作作者",
+    other: "其他",
+  };
+  return roleMap[role] || "其他";
+};
+
+// 根据作者角色获取颜色
+const getAuthorColor = (role: string) => {
+  const colorMap: { [key: string]: string } = {
+    first: "blue",
+    corresponding: "purple",
+    additional: "green",
+    other: "default",
+  };
+  return colorMap[role] || "default";
+};
+
+// 格式化日期
+const formatDate = (dateStr: string, includeTime = false) => {
+  if (!dateStr) return "";
+  try {
+    const date = new Date(dateStr);
+    if (includeTime) {
+      return date.toLocaleString("zh-CN");
+    }
+    return date.toLocaleDateString("zh-CN");
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+// 检查是否是PDF URL
+const isPdfUrl = (url: string) => {
+  if (!url) return false;
+  return url.toLowerCase().endsWith(".pdf");
+};
+
 onMounted(() => {
-  fetchDocumentDetails();
+  fetchDocumentData();
 });
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap");
-
-.document-detail {
+.document-detail-container {
+  max-width: 1000px;
+  margin: 0 auto;
   padding: 20px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
 }
 
 .document-header {
   display: flex;
-  align-items: center;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.back-button {
-  margin-right: auto;
 }
 
 .document-title {
-  font-size: 22px;
-  font-weight: 500;
-  color: #303133;
-  margin: 0;
-  flex-basis: 100%;
-  order: -1;
-  margin-bottom: 10px;
-}
-
-.cormorant-font {
   font-family: "Playfair Display", serif;
-  font-weight: 600;
-  font-size: 26px;
-  letter-spacing: 0.01em;
-  line-height: 1.3;
+  font-size: 2.2rem;
+  margin: 0;
+  flex: 1;
+  color: #303133;
 }
 
 .document-actions {
@@ -456,175 +559,212 @@ onMounted(() => {
   gap: 10px;
 }
 
-.loading-container {
-  padding: 20px 0;
+.info-card {
+  margin-bottom: 24px;
 }
 
-.document-content {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-.keyword-tag {
-  margin-right: 8px;
-  margin-bottom: 5px;
-}
-
-.pdf-container {
-  margin-top: 10px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.notes-container {
-  padding: 16px;
-  background-color: #fafafa;
-  border-radius: 4px;
-  min-height: 400px;
-}
-
-.notes-actions {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.markdown-content {
-  background-color: #ffffff;
-  padding: 16px;
-  border-radius: 4px;
-  border: 1px solid #e8e8e8;
-}
-
-.markdown-content :deep(h1),
-.markdown-content :deep(h2),
-.markdown-content :deep(h3),
-.markdown-content :deep(h4),
-.markdown-content :deep(h5),
-.markdown-content :deep(h6) {
-  margin-top: 24px;
+.info-section {
   margin-bottom: 16px;
-  font-weight: 600;
-  line-height: 1.25;
 }
 
-.markdown-content :deep(h1) {
-  font-size: 2em;
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  color: #555;
+}
+
+.section-icon {
+  margin-right: 6px;
+}
+
+.authors-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.author-tag {
+  margin-right: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.author-role {
+  opacity: 0.8;
+  margin-left: 4px;
+}
+
+.keywords-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meta-info {
+  color: #909399;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.section-header {
+  font-family: "Playfair Display", serif;
+  font-size: 1.6rem;
+  margin: 30px 0 15px;
+  color: #303133;
+  display: flex;
+  align-items: center;
+}
+
+.notes-section {
+  margin-top: 20px;
+}
+
+.note-card {
+  margin-bottom: 24px;
+}
+
+.note-content {
+  line-height: 1.6;
+  color: #606266;
+}
+
+/* Markdown 样式 */
+.note-content :deep(h1),
+.note-preview :deep(h1) {
+  font-size: 1.8em;
   border-bottom: 1px solid #eaecef;
   padding-bottom: 0.3em;
 }
 
-.markdown-content :deep(h2) {
+.note-content :deep(h2),
+.note-preview :deep(h2) {
   font-size: 1.5em;
   border-bottom: 1px solid #eaecef;
   padding-bottom: 0.3em;
 }
 
-.markdown-content :deep(p) {
-  margin-top: 0;
-  margin-bottom: 16px;
+.note-content :deep(h3),
+.note-preview :deep(h3) {
+  font-size: 1.25em;
 }
 
-.markdown-content :deep(blockquote) {
-  margin: 0;
-  padding: 0 1em;
-  color: #6a737d;
-  border-left: 0.25em solid #dfe2e5;
+.note-content :deep(ul),
+.note-preview :deep(ul),
+.note-content :deep(ol),
+.note-preview :deep(ol) {
+  padding-left: 1.2em;
+  margin: 1em 0;
 }
 
-.markdown-content :deep(ul),
-.markdown-content :deep(ol) {
-  padding-left: 2em;
-  margin-top: 0;
-  margin-bottom: 16px;
-}
-
-.markdown-content :deep(code) {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier,
-    monospace;
-  padding: 0.2em 0.4em;
-  margin: 0;
-  font-size: 85%;
+.note-content :deep(code),
+.note-preview :deep(code) {
   background-color: rgba(27, 31, 35, 0.05);
   border-radius: 3px;
-}
-
-.markdown-content :deep(pre) {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier,
-    monospace;
-  padding: 16px;
-  overflow: auto;
   font-size: 85%;
-  line-height: 1.45;
-  background-color: #f6f8fa;
-  border-radius: 3px;
-  margin-top: 0;
-  margin-bottom: 16px;
+  padding: 0.2em 0.4em;
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
 }
 
-.markdown-content :deep(pre code) {
-  background-color: transparent;
-  padding: 0;
+.note-content :deep(blockquote),
+.note-preview :deep(blockquote) {
+  border-left: 0.25em solid #dfe2e5;
+  color: #6a737d;
+  padding: 0 1em;
 }
 
-.markdown-content :deep(table) {
-  display: block;
-  width: 100%;
-  overflow: auto;
-  margin-top: 0;
-  margin-bottom: 16px;
-  border-spacing: 0;
-  border-collapse: collapse;
-}
-
-.markdown-content :deep(table tr) {
-  background-color: #fff;
-  border-top: 1px solid #c6cbd1;
-}
-
-.markdown-content :deep(table th),
-.markdown-content :deep(table td) {
-  padding: 6px 13px;
-  border: 1px solid #dfe2e5;
-}
-
-.markdown-content :deep(table th) {
-  font-weight: 600;
-}
-
-.markdown-content :deep(table tr:nth-child(2n)) {
-  background-color: #f6f8fa;
-}
-
-.markdown-content :deep(img) {
+.note-content :deep(img),
+.note-preview :deep(img) {
   max-width: 100%;
-  box-sizing: content-box;
-  background-color: #fff;
 }
 
-.markdown-preview {
-  background-color: #ffffff;
-  padding: 16px;
-  border: 1px solid #d9d9d9;
+.note-preview {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
   border-radius: 4px;
-  min-height: 300px;
-  max-height: 500px;
+  padding: 16px;
+  min-height: 200px;
   overflow-y: auto;
+  max-height: 500px;
 }
 
-/* 作者表格样式 */
-.authors-table {
+.preview-container {
+  margin-top: 16px;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pdf-preview {
   width: 100%;
-  overflow-x: auto;
+  height: 600px;
+  border: none;
 }
 
-.authors-table :deep(.ant-table-small) {
-  font-size: 13px;
+.preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  background-color: #f8f9fa;
 }
 
-.authors-table :deep(.ant-table-cell) {
-  padding: 8px 12px;
+.pdf-icon {
+  font-size: 48px;
+  color: #f56c6c;
+  margin-bottom: 16px;
 }
+
+.stars-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.clickable {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.clickable:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.journal-name,
+.conference-name,
+.doi-link,
+.folder-link {
+  color: #1890ff;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.journal-name:hover,
+.conference-name:hover,
+.doi-link:hover,
+.folder-link:hover {
+  color: #40a9ff;
+  text-decoration: underline;
+}
+
+.markdown-tips {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #666;
+}
+
+.markdown-tips ul {
+  padding-left: 20px;
+  margin: 8px 0 0;
+}
+
+/* 引入Playfair Display字体 */
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&display=swap");
 </style>

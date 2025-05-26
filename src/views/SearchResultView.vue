@@ -93,7 +93,7 @@
           <div class="result-items">
             <div
               v-for="item in showCategoryResults('document')"
-              :key="`doc-${item.id}`"
+              :key="'doc-' + item.id"
               class="result-item"
               @click="handleItemClick(item)"
             >
@@ -117,8 +117,9 @@
           <div class="result-items">
             <div
               v-for="item in showCategoryResults('author')"
-              :key="`author-${item.id}`"
+              :key="'author-' + item.id"
               class="result-item"
+              @click="handleItemClick(item)"
             >
               <div class="item-content">
                 <div class="item-title">{{ item.name }}</div>
@@ -139,8 +140,9 @@
           <div class="result-items">
             <div
               v-for="item in showCategoryResults('institution')"
-              :key="`inst-${item.id}`"
+              :key="'inst-' + item.id"
               class="result-item"
+              @click="handleItemClick(item)"
             >
               <div class="item-content">
                 <div class="item-title">{{ item.name }}</div>
@@ -150,8 +152,6 @@
           </div>
         </div>
       </div>
-
-      <!-- 移除分页容器 -->
     </div>
   </div>
 </template>
@@ -294,6 +294,10 @@ const filterResults = () => {
 const handleItemClick = (row: SearchResult) => {
   if (row.type === "document") {
     router.push(`/document/${row.id}`);
+  } else if (row.type === "author") {
+    router.push(`/author/${row.id}`);
+  } else if (row.type === "institution") {
+    router.push(`/institution/${row.id}`);
   }
   // 其他类型暂不处理点击事件
 };

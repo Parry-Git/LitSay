@@ -67,6 +67,32 @@ const routes: Array<RouteRecordRaw> = [
       title: "统计",
     },
   },
+  {
+    path: "/author/:id",
+    name: "AuthorDetail",
+    component: () => import("../views/AuthorDetailView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/institution/:id",
+    name: "InstitutionDetail",
+    component: () => import("../views/InstitutionDetailView.vue"),
+    meta: { requiresAuth: true },
+  },
+  // 添加期刊详情页路由
+  {
+    path: "/journal/:id",
+    name: "JournalDetail",
+    component: () => import("../views/JournalDetailView.vue"),
+    meta: { requiresAuth: true },
+  },
+  // 添加会议详情页路由
+  {
+    path: "/conference/:id",
+    name: "ConferenceDetail",
+    component: () => import("../views/ConferenceDetailView.vue"),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({

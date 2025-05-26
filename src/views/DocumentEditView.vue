@@ -205,14 +205,14 @@
           <a-button type="primary" @click="saveDocument" :loading="saving"
             >保存</a-button
           >
-          <a-button
-            type="dashed"
-            @click="goToNoteEdit"
-            style="margin-left: auto"
-          >
-            <template #icon><EditOutlined /></template>
-            编辑阅读笔记
-          </a-button>
+          <!--          <a-button-->
+          <!--            type="dashed"-->
+          <!--            @click="goToNoteEdit"-->
+          <!--            style="margin-left: auto"-->
+          <!--          >-->
+          <!--            <template #icon><EditOutlined /></template>-->
+          <!--            编辑阅读笔记-->
+          <!--          </a-button>-->
         </div>
       </a-form>
     </div>
