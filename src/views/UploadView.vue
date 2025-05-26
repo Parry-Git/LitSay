@@ -41,7 +41,8 @@
                 <a-radio-group v-model:value="parseMethod" button-style="solid">
                   <a-radio-button value="normal">普通解析</a-radio-button>
                   <a-radio-button value="ai" class="ai-button">
-                    <robot-outlined />
+                    <!--                    <robot-outlined />-->
+                    <ExperimentOutlined />
                     AI智能解析
                   </a-radio-button>
                 </a-radio-group>
@@ -405,6 +406,7 @@ import {
   CloudUploadOutlined,
   ImportOutlined,
   RobotOutlined,
+  ExperimentOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   DeleteOutlined, // 添加删除图标
@@ -899,8 +901,8 @@ function getShortFileName(fileName: string) {
 }
 
 .ai-button :deep(.ant-radio-button-checked) {
-  background: #f9f0ff;
-  border-color: #722ed1;
+  background: #871ccc;
+  border-color: #ef2192;
 }
 
 /* 解析步骤样式 */

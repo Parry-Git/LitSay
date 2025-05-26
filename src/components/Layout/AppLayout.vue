@@ -6,7 +6,7 @@
         <img src="@/assets/logo.png" alt="Drive Logo" class="logo" />
         <span class="logo-text">文献管理</span>
       </div>
-      <div class="header-center">
+      <div class="header-center" ref="headerCenterRef">
         <el-input
           v-model="searchQuery"
           placeholder="搜索文献、作者、DOI号等"
@@ -14,115 +14,120 @@
           class="search-input"
           @keyup.enter="handleSearch"
           clearable
+          :disabled="showAdvancedSearch"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
           <template #suffix>
-            <el-popover
-              placement="bottom-end"
-              :width="400"
-              trigger="click"
-              v-model:visible="showAdvancedSearch"
-              popper-class="advanced-search-popover"
-              @show="handlePopoverShow"
-              @hide="handlePopoverHide"
+            <el-button
+              type="text"
+              class="advanced-search-button"
+              @click="toggleAdvancedSearch"
+              :title="showAdvancedSearch ? '关闭高级搜索' : '打开高级搜索'"
             >
-              <!-- 高级搜索表单 -->
-              <template #default>
-                <div class="advanced-search-form">
-                  <h3 class="advanced-search-title">高级搜索</h3>
-
-                  <el-form
-                    :model="advancedSearchForm"
-                    label-position="top"
-                    size="small"
-                  >
-                    <!-- 按关键字搜索字段 -->
-                    <el-form-item label="关键字类型">
-                      <el-checkbox-group
-                        v-model="advancedSearchForm.searchFields"
-                      >
-                        <el-checkbox label="title">标题</el-checkbox>
-                        <el-checkbox label="author">作者</el-checkbox>
-                        <el-checkbox label="doi">DOI号</el-checkbox>
-                        <el-checkbox label="affiliation">作者单位</el-checkbox>
-                        <el-checkbox label="conference">会议名</el-checkbox>
-                      </el-checkbox-group>
-                    </el-form-item>
-
-                    <!-- 发布时间范围 -->
-                    <el-form-item label="发布时间范围">
-                      <el-date-picker
-                        v-model="advancedSearchForm.dateRange"
-                        type="daterange"
-                        range-separator="至"
-                        start-placeholder="开始日期"
-                        end-placeholder="结束日期"
-                        format="YYYY-MM-DD"
-                        value-format="YYYY-MM-DD"
-                        style="width: 100%"
-                      />
-                    </el-form-item>
-
-                    <!-- 文件类型 -->
-                    <el-form-item label="文献类型">
-                      <el-select
-                        v-model="advancedSearchForm.documentType"
-                        placeholder="选择文献类型"
-                        style="width: 100%"
-                        clearable
-                      >
-                        <el-option label="论文" value="paper" />
-                        <el-option label="期刊" value="journal" />
-                        <el-option label="会议报告" value="conference" />
-                        <el-option label="书籍" value="book" />
-                        <el-option label="其他" value="other" />
-                      </el-select>
-                    </el-form-item>
-
-                    <!-- 作者数量 -->
-                    <el-form-item label="作者数量">
-                      <el-select
-                        v-model="advancedSearchForm.authorCount"
-                        placeholder="作者数量"
-                        style="width: 100%"
-                        clearable
-                      >
-                        <el-option label="单作者" value="single" />
-                        <el-option label="2-3名作者" value="few" />
-                        <el-option label="4名以上作者" value="many" />
-                      </el-select>
-                    </el-form-item>
-
-                    <!-- 上传时间范围 -->
-                    <el-form-item label="上传时间范围">
-                      <el-select
-                        v-model="advancedSearchForm.uploadTime"
-                        placeholder="选择上传时间"
-                        style="width: 100%"
-                        clearable
-                      >
-                        <el-option label="最近一周" value="lastWeek" />
-                        <el-option label="最近一个月" value="lastMonth" />
-                        <el-option label="最近三个月" value="lastThreeMonths" />
-                        <el-option label="最近半年" value="lastSixMonths" />
-                        <el-option label="最近一年" value="lastYear" />
-                      </el-select>
-                    </el-form-item>
-
-                    <div class="form-actions">
-                      <el-button @click="resetAdvancedSearch">重置</el-button>
-                      <el-button type="primary" @click="performAdvancedSearch"
-                        >搜索</el-button
-                      >
-                    </div>
-                  </el-form>
-                </div>
-              </template>
-            </el-popover>
+              <el-icon><Filter /></el-icon>
+            </el-button>
           </template>
         </el-input>
+
+        <a-popover
+          placement="bottomRight"
+          trigger="click"
+          v-model:visible="showAdvancedSearch"
+          :overlay-style="{ width: '380px' }"
+          :get-popup-container="getPopupContainer"
+        >
+          <template #content>
+            <div class="advanced-search-form-ant">
+              <h3 class="advanced-search-title">高级搜索</h3>
+
+              <a-form layout="vertical" :model="advancedSearchForm">
+                <!-- 搜索内容 -->
+                <a-form-item label="搜索内容">
+                  <a-input-group compact>
+                    <a-input
+                      v-model:value="advancedSearchForm.query"
+                      placeholder="输入搜索内容"
+                      style="width: calc(100% - 92px)"
+                    />
+                    <a-tooltip title="启用正则表达式搜索">
+                      <a-switch
+                        v-model:checked="advancedSearchForm.useRegex"
+                        checked-children="正则"
+                        un-checked-children="普通"
+                        class="regex-switch"
+                      />
+                    </a-tooltip>
+                  </a-input-group>
+                </a-form-item>
+
+                <!-- 发布时间范围 -->
+                <a-form-item label="发布时间范围">
+                  <a-range-picker
+                    v-model:value="dateRangeValue"
+                    style="width: 100%"
+                    format="YYYY-MM-DD"
+                    :get-popup-container="(triggerNode) => getPopupContainer()"
+                    @change="handleDateRangeChange"
+                  />
+                </a-form-item>
+
+                <!-- 关键字 AND 搜索 -->
+                <a-form-item label="包含以下所有关键词（与）">
+                  <a-select
+                    v-model:value="advancedSearchForm.keywordsAnd"
+                    mode="tags"
+                    style="width: 100%"
+                    placeholder="输入关键词后按回车添加"
+                    :get-popup-container="(triggerNode) => getPopupContainer()"
+                    :disabled="hasOrKeywords"
+                    @keydown.enter.prevent="(e) => handleKeywordEnter(e, 'and')"
+                  >
+                    <template
+                      v-if="advancedSearchForm.keywordsAnd.length === 0"
+                    >
+                      <a-select-option value="使用AND搜索" disabled>
+                        请输入关键词，按Enter添加
+                      </a-select-option>
+                    </template>
+                  </a-select>
+                </a-form-item>
+
+                <!-- 关键字 OR 搜索 -->
+                <a-form-item label="包含以下任一关键词（或）">
+                  <a-select
+                    v-model:value="advancedSearchForm.keywordsOr"
+                    mode="tags"
+                    style="width: 100%"
+                    placeholder="输入关键词后按回车添加"
+                    :get-popup-container="(triggerNode) => getPopupContainer()"
+                    :disabled="hasAndKeywords"
+                    @keydown.enter.prevent="(e) => handleKeywordEnter(e, 'or')"
+                  >
+                    <template v-if="advancedSearchForm.keywordsOr.length === 0">
+                      <a-select-option value="使用OR搜索" disabled>
+                        请输入关键词，按Enter添加
+                      </a-select-option>
+                    </template>
+                  </a-select>
+                </a-form-item>
+
+                <!-- 操作按钮 -->
+                <div class="form-actions">
+                  <a-button @click="resetAdvancedSearch">重置</a-button>
+                  <a-button type="primary" @click="performAdvancedSearch"
+                    >搜索</a-button
+                  >
+                </div>
+              </a-form>
+            </div>
+          </template>
+          <template #trigger>
+            <span></span>
+            <!-- 空的trigger模板，使用按钮点击触发 -->
+          </template>
+        </a-popover>
       </div>
 
       <!-- 修改的头部右侧区域 -->
@@ -262,6 +267,7 @@ import {
   Loading,
   Filter,
 } from "@element-plus/icons-vue";
+import dayjs from "dayjs";
 
 // 修改导入方式，直接导入所需图标
 import UserOutlined from "@ant-design/icons-vue/UserOutlined";
@@ -300,9 +306,13 @@ interface SearchResult {
 
 // 定义高级搜索表单类型
 interface AdvancedSearchForm {
+  query: string;
+  useRegex: boolean;
   searchFields: string[];
   dateRange: [string, string] | null;
   documentType: string | null;
+  keywordsAnd: string[];
+  keywordsOr: string[];
   authorCount: string | null;
   uploadTime: string | null;
 }
@@ -327,12 +337,31 @@ const showAdvancedSearch = ref(false);
 
 // 高级搜索相关
 const advancedSearchForm = ref<AdvancedSearchForm>({
+  query: "",
+  useRegex: false,
   searchFields: ["title", "author", "doi"],
   dateRange: null,
   documentType: null,
+  keywordsAnd: [],
+  keywordsOr: [],
   authorCount: null,
   uploadTime: null,
 });
+
+// 为Ant Design的日期选择器添加dayjs值
+const dateRangeValue = ref<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([
+  null,
+  null,
+]);
+
+// 处理日期范围变化
+const handleDateRangeChange = (
+  dates: [dayjs.Dayjs | null, dayjs.Dayjs | null],
+  dateStrings: [string, string]
+) => {
+  advancedSearchForm.value.dateRange =
+    dateStrings[0] && dateStrings[1] ? (dateStrings as [string, string]) : null;
+};
 
 // 用户信息
 const userInfo = reactive<UserInfo>({
@@ -392,18 +421,103 @@ const handleSearch = () => {
   }
 };
 
-// 执行高级搜索
+// 添加计算属性检查是否有"与"关键词
+const hasAndKeywords = computed(() => {
+  return advancedSearchForm.value.keywordsAnd.length > 0;
+});
+
+// 添加计算属性检查是否有"或"关键词
+const hasOrKeywords = computed(() => {
+  return advancedSearchForm.value.keywordsOr.length > 0;
+});
+
+// 处理关键词输入时的Enter键事件
+const handleKeywordEnter = (e: KeyboardEvent, type: "and" | "or") => {
+  // 阻止默认行为，避免清除已输入的关键词
+  e.preventDefault();
+
+  // 获取输入框元素
+  const target = e.target as HTMLInputElement;
+  const value = target.value?.trim();
+
+  // 如果有有效输入且不是空白字符
+  if (value && value.length > 0) {
+    // 根据类型添加到对应的关键词数组
+    if (type === "and") {
+      if (!advancedSearchForm.value.keywordsAnd.includes(value)) {
+        advancedSearchForm.value.keywordsAnd.push(value);
+      }
+    } else {
+      if (!advancedSearchForm.value.keywordsOr.includes(value)) {
+        advancedSearchForm.value.keywordsOr.push(value);
+      }
+    }
+
+    // 清空输入值，准备下一次输入
+    target.value = "";
+  }
+};
+
+// 重置高级搜索表单 - 更新现有函数
+const resetAdvancedSearch = () => {
+  advancedSearchForm.value = {
+    query: "",
+    useRegex: false,
+    searchFields: ["title", "author", "doi"],
+    dateRange: null,
+    documentType: null,
+    keywordsAnd: [],
+    keywordsOr: [],
+    authorCount: null,
+    uploadTime: null,
+  };
+
+  // 重置日期选择器
+  dateRangeValue.value = [null, null];
+};
+
+// 切换高级搜索表单的显示状态
+const toggleAdvancedSearch = () => {
+  showAdvancedSearch.value = !showAdvancedSearch.value;
+  if (showAdvancedSearch.value) {
+    // 如果打开高级搜索，将当前搜索词转移到表单中
+    advancedSearchForm.value.query = searchQuery.value;
+    searchQuery.value = "";
+
+    // 如果有日期范围，转换为dayjs对象
+    if (advancedSearchForm.value.dateRange) {
+      dateRangeValue.value = [
+        dayjs(advancedSearchForm.value.dateRange[0]),
+        dayjs(advancedSearchForm.value.dateRange[1]),
+      ];
+    }
+  }
+};
+
+// 执行高级搜索 - 更新现有函数
 const performAdvancedSearch = () => {
   // 构建高级搜索查询参数
   const advancedParams = {
-    q: searchQuery.value,
-    fields: advancedSearchForm.value.searchFields.join(","),
+    q: advancedSearchForm.value.query,
+    regex: advancedSearchForm.value.useRegex ? "1" : "0",
     dateFrom: advancedSearchForm.value.dateRange?.[0] || "",
     dateTo: advancedSearchForm.value.dateRange?.[1] || "",
-    type: advancedSearchForm.value.documentType || "",
-    authors: advancedSearchForm.value.authorCount || "",
-    uploadTime: advancedSearchForm.value.uploadTime || "",
+    keywordsAnd: advancedSearchForm.value.keywordsAnd?.join(",") || "",
+    keywordsOr: advancedSearchForm.value.keywordsOr?.join(",") || "",
   };
+
+  // 修改验证逻辑：允许空搜索内容，但必须至少有一个筛选条件
+  if (
+    !advancedParams.q.trim() &&
+    !advancedParams.keywordsAnd &&
+    !advancedParams.keywordsOr &&
+    !advancedParams.dateFrom &&
+    !advancedParams.dateTo
+  ) {
+    ElMessage.warning("请至少输入搜索内容、关键词或选择日期范围");
+    return;
+  }
+  console.log("执行高级搜索，参数：", advancedParams);
 
   // 跳转到搜索结果页面，带上高级搜索参数
   router.push({
@@ -412,17 +526,6 @@ const performAdvancedSearch = () => {
   });
 
   showAdvancedSearch.value = false;
-};
-
-// 重置高级搜索表单
-const resetAdvancedSearch = () => {
-  advancedSearchForm.value = {
-    searchFields: ["title", "author", "doi"],
-    dateRange: null,
-    documentType: null,
-    authorCount: null,
-    uploadTime: null,
-  };
 };
 
 // 处理Popover显示
@@ -496,6 +599,26 @@ const handleChangePassword = () => {
 
 // 创建一个事件总线用于跨组件通信
 const folderChangedBus = useEventBus("folder-changed");
+
+// 添加DOM引用
+const headerCenterRef = ref<HTMLElement | null>(null);
+
+// 添加获取弹窗容器的方法
+const getPopupContainer = () => {
+  // 首先尝试使用ref引用
+  if (headerCenterRef.value) {
+    return headerCenterRef.value;
+  }
+
+  // 如果ref未设置，尝试使用querySelector
+  const headerCenter = document.querySelector(".header-center");
+  if (headerCenter) {
+    return headerCenter as HTMLElement;
+  }
+
+  // 最后回退到body
+  return document.body;
+};
 
 // 组件挂载时获取用户信息
 onMounted(() => {
@@ -700,33 +823,66 @@ onMounted(() => {
 .advanced-search-button {
   margin-left: 5px;
   color: #606266;
+  height: 32px;
 }
 
 .advanced-search-button:hover {
   color: #409eff;
 }
 
-/* 高级搜索表单样式 */
-.advanced-search-form {
-  padding: 0 10px;
+/* 高级搜索表单样式 - Ant Design版本 */
+.advanced-search-form-ant {
+  padding: 12px;
 }
 
-.advanced-search-title {
+.advanced-search-form-ant .advanced-search-title {
   font-size: 16px;
   font-weight: 500;
   color: #303133;
-  margin: 0 0 20px 0;
+  margin: 0 0 16px 0;
   text-align: center;
 }
 
-.form-actions {
+.advanced-search-form-ant .form-actions {
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
-  gap: 10px;
+  gap: 8px;
 }
 
-:deep(.advanced-search-popover) {
-  padding: 20px 0;
+/* 正则表达式开关样式 */
+.regex-switch {
+  width: 90px;
+}
+
+/* 确保popover位于正确位置 */
+:deep(.ant-popover-inner) {
+  background: white;
+  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12),
+    0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Ant表单元素样式调整 */
+:deep(.ant-form-item) {
+  margin-bottom: 16px;
+}
+
+:deep(.ant-input-group) {
+  display: flex;
+  align-items: center;
+}
+
+:deep(.ant-switch) {
+  margin-left: 8px;
+}
+
+/* 添加禁用状态的说明样式 */
+:deep(.ant-select-disabled) .ant-select-selection-placeholder {
+  color: #ff7875;
+}
+
+:deep(.ant-select-disabled) {
+  background-color: rgba(250, 250, 250, 0.8);
+  cursor: not-allowed;
 }
 </style>

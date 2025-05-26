@@ -22,6 +22,25 @@
         >
           日期: {{ formatDateRange(dateRange) }}
         </el-tag>
+        <el-tag v-if="useRegex" size="small" closable @close="clearRegexSearch">
+          正则表达式搜索
+        </el-tag>
+        <el-tag
+          v-if="keywordsAnd.length > 0"
+          size="small"
+          closable
+          @close="clearKeywordsAnd"
+        >
+          关键词(与): {{ keywordsAnd.join(", ") }}
+        </el-tag>
+        <el-tag
+          v-if="keywordsOr.length > 0"
+          size="small"
+          closable
+          @close="clearKeywordsOr"
+        >
+          关键词(或): {{ keywordsOr.join(", ") }}
+        </el-tag>
         <el-tag
           v-if="documentType"
           size="small"
@@ -56,7 +75,7 @@
         </el-button>
       </div>
 
-      <div class="search-filters">
+      <div class="search-filters" v-if="!isAdvancedSearch">
         <el-radio-group
           v-model="activeFilter"
           size="small"
@@ -105,9 +124,9 @@
           </div>
         </div>
 
-        <!-- 作者结果 -->
+        <!-- 作者结果 - 仅在非高级搜索时显示 -->
         <div
-          v-if="showCategoryResults('author').length > 0"
+          v-if="!isAdvancedSearch && showCategoryResults('author').length > 0"
           class="result-category"
         >
           <div class="category-header">
@@ -128,9 +147,11 @@
           </div>
         </div>
 
-        <!-- 机构结果 -->
+        <!-- 机构结果 - 仅在非高级搜索时显示 -->
         <div
-          v-if="showCategoryResults('institution').length > 0"
+          v-if="
+            !isAdvancedSearch && showCategoryResults('institution').length > 0
+          "
           class="result-category"
         >
           <div class="category-header">
@@ -168,7 +189,6 @@ import {
   BankOutlined,
 } from "@ant-design/icons-vue";
 
-// 定义搜索结果类型
 interface SearchResult {
   id: string | number;
   name: string;
@@ -184,39 +204,15 @@ const searchQuery = ref("");
 const searchResults = ref<SearchResult[]>([]);
 const activeFilter = ref("all");
 
-// 移除分页相关变量
-// const currentPage = ref(1);
-// const pageSize = ref(10;
-
-// 高级搜索相关参数
 const searchFields = ref<string[]>([]);
 const dateRange = ref({ from: "", to: "" });
 const documentType = ref("");
 const authorCount = ref("");
 const uploadTime = ref("");
+const useRegex = ref(false);
+const keywordsAnd = ref<string[]>([]);
+const keywordsOr = ref<string[]>([]);
 
-// 根据筛选条件过滤结果 - 修改为返回所有结果，不做分页处理
-const filteredResults = computed(() => {
-  let results = searchResults.value;
-
-  // 应用类型筛选
-  if (activeFilter.value !== "all") {
-    results = results.filter((item) => item.type === activeFilter.value);
-  }
-
-  // 不再做分页处理，返回全部结果
-  return results;
-});
-
-// 获取指定类别的结果
-const showCategoryResults = (category: string) => {
-  if (activeFilter.value !== "all" && activeFilter.value !== category) {
-    return [];
-  }
-  return searchResults.value.filter((item) => item.type === category);
-};
-
-// 判断是否有高级筛选
 const hasAdvancedFilters = computed(() => {
   return (
     searchFields.value.length > 0 ||
@@ -224,13 +220,51 @@ const hasAdvancedFilters = computed(() => {
     dateRange.value.to ||
     documentType.value ||
     authorCount.value ||
+    uploadTime.value ||
+    useRegex.value ||
+    keywordsAnd.value.length > 0 ||
+    keywordsOr.value.length > 0
+  );
+});
+
+const isAdvancedSearch = computed(() => {
+  return (
+    useRegex.value ||
+    dateRange.value.from ||
+    dateRange.value.to ||
+    keywordsAnd.value.length > 0 ||
+    keywordsOr.value.length > 0 ||
+    documentType.value ||
+    authorCount.value ||
     uploadTime.value
   );
 });
 
-// 执行搜索 (支持高级搜索参数)
+const filteredResults = computed(() => {
+  let results = searchResults.value;
+
+  if (isAdvancedSearch.value) {
+    results = results.filter((item) => item.type === "document");
+  } else if (activeFilter.value !== "all") {
+    results = results.filter((item) => item.type === activeFilter.value);
+  }
+
+  return results;
+});
+
+const showCategoryResults = (category: string) => {
+  if (isAdvancedSearch.value && category !== "document") {
+    return [];
+  }
+
+  if (activeFilter.value !== "all" && activeFilter.value !== category) {
+    return [];
+  }
+  return searchResults.value.filter((item) => item.type === category);
+};
+
 const performSearch = async () => {
-  if (!searchQuery.value) return;
+  // if (!searchQuery.value) return;
 
   loading.value = true;
 
@@ -243,13 +277,14 @@ const performSearch = async () => {
       type: documentType.value,
       authors: authorCount.value,
       uploadTime: uploadTime.value,
+      regex: useRegex.value,
+      keywordsAnd: keywordsAnd.value,
+      keywordsOr: keywordsOr.value,
     };
+    console.log("搜索值:", searchQuery.value);
 
     const response = await searchLibrary(searchQuery.value, searchParams);
     searchResults.value = response.data.data?.results || [];
-
-    // 移除重置分页的代码
-    // currentPage.value = 1;
   } catch (error) {
     console.error("搜索失败", error);
     ElMessage.error("搜索失败，请稍后重试");
@@ -266,7 +301,7 @@ watch(
     if (newQuery.q) {
       searchQuery.value = newQuery.q as string;
 
-      // 解析高级搜索参数
+      // 解析高级搜索参数 - 精简版
       searchFields.value = newQuery.fields
         ? (newQuery.fields as string).split(",")
         : [];
@@ -277,6 +312,13 @@ watch(
       documentType.value = (newQuery.type as string) || "";
       authorCount.value = (newQuery.authors as string) || "";
       uploadTime.value = (newQuery.uploadTime as string) || "";
+      useRegex.value = newQuery.regex === "1";
+      keywordsAnd.value = newQuery.keywordsAnd
+        ? (newQuery.keywordsAnd as string).split(",")
+        : [];
+      keywordsOr.value = newQuery.keywordsOr
+        ? (newQuery.keywordsOr as string).split(",")
+        : [];
 
       performSearch();
     }
@@ -409,6 +451,24 @@ const clearUploadTime = () => {
   updateSearch();
 };
 
+// 清除正则表达式搜索
+const clearRegexSearch = () => {
+  useRegex.value = false;
+  updateSearch();
+};
+
+// 清除关键词（与）搜索
+const clearKeywordsAnd = () => {
+  keywordsAnd.value = [];
+  updateSearch();
+};
+
+// 清除关键词（或）搜索
+const clearKeywordsOr = () => {
+  keywordsOr.value = [];
+  updateSearch();
+};
+
 // 清除所有筛选
 const clearAllFilters = () => {
   searchFields.value = [];
@@ -416,6 +476,9 @@ const clearAllFilters = () => {
   documentType.value = "";
   authorCount.value = "";
   uploadTime.value = "";
+  useRegex.value = false;
+  keywordsAnd.value = [];
+  keywordsOr.value = [];
   updateSearch();
 };
 
@@ -425,11 +488,18 @@ const updateSearch = () => {
     path: "/search",
     query: {
       q: searchQuery.value,
+      ...(useRegex.value ? { regex: "1" } : {}),
       ...(searchFields.value.length
         ? { fields: searchFields.value.join(",") }
         : {}),
       ...(dateRange.value.from ? { dateFrom: dateRange.value.from } : {}),
       ...(dateRange.value.to ? { dateTo: dateRange.value.to } : {}),
+      ...(keywordsAnd.value.length
+        ? { keywordsAnd: keywordsAnd.value.join(",") }
+        : {}),
+      ...(keywordsOr.value.length
+        ? { keywordsOr: keywordsOr.value.join(",") }
+        : {}),
       ...(documentType.value ? { type: documentType.value } : {}),
       ...(authorCount.value ? { authors: authorCount.value } : {}),
       ...(uploadTime.value ? { uploadTime: uploadTime.value } : {}),
@@ -439,23 +509,28 @@ const updateSearch = () => {
 
 // 组件挂载时执行搜索
 onMounted(() => {
-  if (route.query.q) {
-    searchQuery.value = route.query.q as string;
+  searchQuery.value = route.query.q as string;
 
-    // 解析高级搜索参数
-    searchFields.value = route.query.fields
-      ? (route.query.fields as string).split(",")
-      : [];
-    dateRange.value = {
-      from: (route.query.dateFrom as string) || "",
-      to: (route.query.dateTo as string) || "",
-    };
-    documentType.value = (route.query.type as string) || "";
-    authorCount.value = (route.query.authors as string) || "";
-    uploadTime.value = (route.query.uploadTime as string) || "";
+  // 解析高级搜索参数
+  searchFields.value = route.query.fields
+    ? (route.query.fields as string).split(",")
+    : [];
+  dateRange.value = {
+    from: (route.query.dateFrom as string) || "",
+    to: (route.query.dateTo as string) || "",
+  };
+  documentType.value = (route.query.type as string) || "";
+  authorCount.value = (route.query.authors as string) || "";
+  uploadTime.value = (route.query.uploadTime as string) || "";
+  useRegex.value = route.query.regex === "true";
+  keywordsAnd.value = route.query.keywordsAnd
+    ? (route.query.keywordsAnd as string).split(",")
+    : [];
+  keywordsOr.value = route.query.keywordsOr
+    ? (route.query.keywordsOr as string).split(",")
+    : [];
 
-    performSearch();
-  }
+  performSearch();
 });
 </script>
 

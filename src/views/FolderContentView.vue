@@ -47,7 +47,7 @@
                     v-if="record.type === 'folder'"
                     class="folder-icon"
                   />
-                  <file-pdf-outlined v-else class="document-icon" />
+                  <file-text-outlined v-else class="document-icon" />
                   <span
                     class="item-name"
                     :class="{ 'is-folder': record.type === 'folder' }"
@@ -155,6 +155,7 @@ import { message } from "ant-design-vue";
 import {
   FolderOutlined,
   FilePdfOutlined,
+  FileTextOutlined,
   FolderAddOutlined,
   UploadOutlined,
   EditOutlined,

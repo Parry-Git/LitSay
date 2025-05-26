@@ -418,7 +418,7 @@ export const searchLibrary = async (query: string, advancedParams?: any) => {
   // 如果是开发环境，使用模拟数据
   if (isDevelopment) {
     console.log("[Dev Mode] 使用模拟数据搜索:", query, advancedParams);
-
+    // ...使用模拟数据
     // 获取模拟搜索结果
     const results = searchResultData[query] || [];
 
@@ -448,6 +448,8 @@ export const searchLibrary = async (query: string, advancedParams?: any) => {
       token: token ? token : "", // 通过URL参数传递token
       ...advancedParams,
     };
+
+    console.log("搜索参数:", params);
 
     // 发起符合"简单请求"条件的请求
     const response = await axios.get(buildApiPath("/search"), {
