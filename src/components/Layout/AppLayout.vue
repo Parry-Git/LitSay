@@ -13,8 +13,6 @@
           prefix-icon="Search"
           class="search-input"
           @keyup.enter="handleSearch"
-          @focus="showSearchResults = true"
-          @blur="hideSearchResultsDelayed"
           clearable
         >
           <template #prefix>
@@ -30,16 +28,6 @@
               @show="handlePopoverShow"
               @hide="handlePopoverHide"
             >
-              <template #reference>
-                <el-button
-                  class="advanced-search-button"
-                  type="text"
-                  :icon="Filter"
-                  circle
-                  @click.stop
-                ></el-button>
-              </template>
-
               <!-- 高级搜索表单 -->
               <template #default>
                 <div class="advanced-search-form">
@@ -135,53 +123,6 @@
             </el-popover>
           </template>
         </el-input>
-
-        <!-- 搜索结果浮层 -->
-        <div v-show="showSearchResults && searchQuery" class="search-results">
-          <div v-if="searching" class="search-loading">
-            <el-icon class="is-loading"><Loading /></el-icon>
-            <span>正在搜索...</span>
-          </div>
-          <div
-            v-else-if="searchResults.length === 0 && searchQuery"
-            class="no-results"
-          >
-            未找到匹配"{{ searchQuery }}"的结果
-          </div>
-          <ul v-else class="results-list">
-            <li
-              v-for="(result, index) in searchResults"
-              :key="index"
-              @click="navigateToResult(result)"
-              class="result-item"
-            >
-              <el-icon :size="18" class="result-icon">
-                <Folder v-if="result.type === 'folder'" />
-                <Document v-else />
-              </el-icon>
-              <div class="result-content">
-                <div class="result-name">{{ result.name }}</div>
-                <div class="result-info">
-                  <span class="result-type">{{
-                    getResultTypeLabel(result.type)
-                  }}</span>
-                  <span v-if="result.matchField" class="result-match">
-                    匹配: {{ getMatchFieldLabel(result.matchField) }}
-                  </span>
-                </div>
-              </div>
-            </li>
-          </ul>
-          <div v-if="searchResults.length > 0" class="view-all">
-            <el-button
-              type="text"
-              @click="viewAllResults"
-              class="view-all-button"
-            >
-              查看全部结果
-            </el-button>
-          </div>
-        </div>
       </div>
 
       <!-- 修改的头部右侧区域 -->
@@ -310,7 +251,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted, onMounted, reactive, computed } from "vue";
+import { ref, watch, onMounted, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import {
@@ -334,6 +275,9 @@ import FolderTree from "@/components/FolderTree.vue";
 import { searchLibrary } from "@/api/load";
 import { logout } from "@/api/auth";
 import { useEventBus } from "@vueuse/core";
+
+// 添加这一行解决showUserDrawer未定义的问题
+const showUserDrawer = ref(false);
 
 // 注册图标组件，使其在模板中可用
 const icons = {
@@ -373,14 +317,15 @@ interface UserInfo {
 
 const router = useRouter();
 const searchQuery = ref("");
-const searching = ref(false);
-const searchResults = ref<SearchResult[]>([]);
-const showSearchResults = ref(false);
-const showUserDrawer = ref(false);
-let hideResultsTimeout: number | null = null;
+const showAdvancedSearch = ref(false);
+
+// 移除搜索结果相关的变量
+// const searching = ref(false);
+// const searchResults = ref<SearchResult[]>([]);
+// const showSearchResults = ref(false);
+// let hideResultsTimeout: number | null = null;
 
 // 高级搜索相关
-const showAdvancedSearch = ref(false);
 const advancedSearchForm = ref<AdvancedSearchForm>({
   searchFields: ["title", "author", "doi"],
   dateRange: null,
@@ -436,37 +381,14 @@ const goToStats = () => {
   router.push("/stats");
 };
 
-// 处理回车键搜索
-const handleSearch = async () => {
+// 处理回车键搜索 - 修改为直接跳转到搜索结果页面
+const handleSearch = () => {
   if (searchQuery.value.trim()) {
-    await performSearch();
-
-    // 如果没有结果，显示空结果提示
-    if (searchResults.value.length === 0) {
-      showSearchResults.value = true;
-    }
-
-    // 如果搜索结果超过5个，自动跳转到搜索结果页
-    if (searchResults.value.length > 5) {
-      viewAllResults();
-    }
-  }
-};
-
-// 执行搜索
-const performSearch = async () => {
-  searching.value = true;
-
-  try {
-    const response = await searchLibrary(searchQuery.value);
-    searchResults.value = response.data.data?.results || [];
-    showSearchResults.value = true; // 显示搜索结果
-  } catch (error) {
-    console.error("搜索失败", error);
-    ElMessage.error("搜索失败，请稍后重试");
-    searchResults.value = [];
-  } finally {
-    searching.value = false;
+    // 直接跳转到搜索结果页面
+    router.push({
+      path: "/search",
+      query: { q: searchQuery.value },
+    });
   }
 };
 
@@ -506,7 +428,7 @@ const resetAdvancedSearch = () => {
 // 处理Popover显示
 const handlePopoverShow = () => {
   // 显示高级搜索时，防止搜索结果浮层显示
-  showSearchResults.value = false;
+  // showSearchResults.value = false;
 };
 
 // 处理Popover隐藏
@@ -514,38 +436,7 @@ const handlePopoverHide = () => {
   // 可以添加一些额外的逻辑
 };
 
-// 导航到结果
-const navigateToResult = (result: SearchResult) => {
-  if (result.type === "folder") {
-    router.push(`/folder/${result.id}`);
-  } else {
-    router.push(`/document/${result.id}`);
-  }
-  showSearchResults.value = false;
-};
-
-// 查看全部结果
-const viewAllResults = () => {
-  router.push({
-    path: "/search",
-    query: { q: searchQuery.value },
-  });
-  showSearchResults.value = false;
-};
-
-// 获取结果类型标签
-const getResultTypeLabel = (type: string): string => {
-  switch (type) {
-    case "folder":
-      return "文件夹";
-    case "document":
-      return "文献";
-    default:
-      return "未知类型";
-  }
-};
-
-// 获取匹配字段标签
+// 保留获取匹配字段标签的方法，可能在其他地方使用
 const getMatchFieldLabel = (field?: string): string => {
   switch (field) {
     case "title":
@@ -563,13 +454,6 @@ const getMatchFieldLabel = (field?: string): string => {
     default:
       return "多字段";
   }
-};
-
-// 延迟隐藏搜索结果
-const hideSearchResultsDelayed = () => {
-  hideResultsTimeout = window.setTimeout(() => {
-    showSearchResults.value = false;
-  }, 200);
 };
 
 // 处理登出
@@ -616,13 +500,6 @@ const folderChangedBus = useEventBus("folder-changed");
 // 组件挂载时获取用户信息
 onMounted(() => {
   getUserInfo();
-});
-
-// 清理组件销毁前的超时
-onUnmounted(() => {
-  if (hideResultsTimeout) {
-    clearTimeout(hideResultsTimeout);
-  }
 });
 </script>
 
@@ -672,92 +549,6 @@ onUnmounted(() => {
 .search-input {
   width: 60%;
   max-width: 720px;
-}
-
-/* 搜索结果样式 */
-.search-results {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(60% - 2px);
-  max-width: 718px;
-  background-color: white;
-  border-radius: 0 0 8px 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  z-index: 10;
-  margin-top: 2px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.search-loading,
-.no-results {
-  padding: 15px;
-  text-align: center;
-  color: #909399;
-}
-
-.search-loading .el-icon {
-  margin-right: 5px;
-}
-
-.results-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.result-item {
-  padding: 10px 15px;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.result-item:hover {
-  background-color: #f5f7fa;
-}
-
-.result-icon {
-  color: #409eff;
-  margin-right: 10px;
-}
-
-.result-content {
-  flex: 1;
-}
-
-.result-name {
-  font-weight: 500;
-}
-
-.result-info {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 3px;
-}
-
-.result-type {
-  background-color: #f0f2f5;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-right: 8px;
-}
-
-.result-match {
-  color: #67c23a;
-}
-
-.view-all {
-  padding: 10px;
-  text-align: center;
-  border-top: 1px solid #ebeef5;
-}
-
-.view-all-button {
-  color: #409eff;
 }
 
 /* 头部右侧样式 */

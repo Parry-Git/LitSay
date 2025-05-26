@@ -438,14 +438,24 @@ export const searchLibrary = async (query: string, advancedParams?: any) => {
     });
   }
 
-  // 生产环境使用实际 API
+  // 生产环境使用实际API
   try {
+    // 修改搜索API调用，使用URL参数传递token而不是Authorization头
+    const token = localStorage.getItem("token");
+    const params = {
+      q: query,
+      userId: getCurrentUserId(),
+      token: token ? token : "", // 通过URL参数传递token
+      ...advancedParams,
+    };
+
+    // 发起符合"简单请求"条件的请求
     const response = await axios.get(buildApiPath("/search"), {
-      headers: getAuthHeaders(),
-      params: {
-        q: query,
-        userId: getCurrentUserId(),
-        ...advancedParams,
+      params,
+      // 移除可能触发预检请求的头部
+      headers: {
+        Accept: "application/json", // 这是"简单请求"允许的头部
+        "Content-Type": "application/json", // 这是"简单请求"允许的头部之一
       },
     });
     return response;

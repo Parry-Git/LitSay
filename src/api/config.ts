@@ -21,10 +21,23 @@ export const DEFAULT_REQUEST_CONFIG = {
   // withCredentials: true,
 };
 
+/**
+ * 获取包含认证信息的请求头
+ */
 export const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
-    ...DEFAULT_REQUEST_CONFIG.headers,
     Authorization: token ? `Bearer ${token}` : "",
+    "Content-Type": "application/json",
+  };
+};
+
+/**
+ * 获取简单请求的认证参数（适用于避免OPTIONS预检请求的场景）
+ */
+export const getAuthParams = () => {
+  const token = localStorage.getItem("token");
+  return {
+    token: token || "",
   };
 };

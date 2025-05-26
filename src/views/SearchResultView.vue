@@ -64,7 +64,8 @@
         >
           <el-radio-button label="all">全部</el-radio-button>
           <el-radio-button label="document">文献</el-radio-button>
-          <el-radio-button label="folder">文件夹</el-radio-button>
+          <el-radio-button label="author">作者</el-radio-button>
+          <el-radio-button label="institution">机构</el-radio-button>
         </el-radio-group>
       </div>
     </div>
@@ -79,68 +80,78 @@
       <div v-if="filteredResults.length === 0" class="empty-results">
         <el-empty description="没有找到匹配的结果" />
       </div>
-      <el-table
-        v-else
-        :data="filteredResults"
-        style="width: 100%"
-        @row-click="handleItemClick"
-      >
-        <el-table-column width="60">
-          <template #default="{ row }">
-            <el-icon :size="24" class="content-icon">
-              <Folder v-if="row.type === 'folder'" />
-              <Document v-else />
-            </el-icon>
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="name" label="名称">
-          <template #default="{ row }">
-            <span
-              class="item-name"
-              :class="{ 'is-folder': row.type === 'folder' }"
+      <div v-else class="results-container">
+        <!-- 文献结果 -->
+        <div
+          v-if="showCategoryResults('document').length > 0"
+          class="result-category"
+        >
+          <div class="category-header">
+            <FileOutlined class="category-icon document-icon" />
+            <h3>文献</h3>
+          </div>
+          <div class="result-items">
+            <div
+              v-for="item in showCategoryResults('document')"
+              :key="`doc-${item.id}`"
+              class="result-item"
+              @click="handleItemClick(item)"
             >
-              {{ row.name }}
-            </span>
-          </template>
-        </el-table-column>
+              <div class="item-content">
+                <div class="item-title">{{ item.name }}</div>
+                <div class="item-path" v-if="item.path">{{ item.path }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <el-table-column label="类型" width="120">
-          <template #default="{ row }">
-            <el-tag
-              :type="row.type === 'folder' ? 'warning' : 'primary'"
-              size="small"
+        <!-- 作者结果 -->
+        <div
+          v-if="showCategoryResults('author').length > 0"
+          class="result-category"
+        >
+          <div class="category-header">
+            <UserOutlined class="category-icon author-icon" />
+            <h3>作者</h3>
+          </div>
+          <div class="result-items">
+            <div
+              v-for="item in showCategoryResults('author')"
+              :key="`author-${item.id}`"
+              class="result-item"
             >
-              {{ row.type === "folder" ? "文件夹" : "文献" }}
-            </el-tag>
-          </template>
-        </el-table-column>
+              <div class="item-content">
+                <div class="item-title">{{ item.name }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <el-table-column label="匹配字段" width="150">
-          <template #default="{ row }">
-            <span v-if="row.matchField">
-              {{ getMatchFieldLabel(row.matchField) }}
-            </span>
-            <span v-else>多字段</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="位置" width="220">
-          <template #default="{ row }">
-            <span v-if="row.path">{{ row.path }}</span>
-            <span v-else>—</span>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="pagination-container" v-if="searchResults.length > pageSize">
-        <el-pagination
-          v-model:current-page="currentPage"
-          :page-size="pageSize"
-          :total="searchResults.length"
-          layout="prev, pager, next"
-        />
+        <!-- 机构结果 -->
+        <div
+          v-if="showCategoryResults('institution').length > 0"
+          class="result-category"
+        >
+          <div class="category-header">
+            <BankOutlined class="category-icon institution-icon" />
+            <h3>机构</h3>
+          </div>
+          <div class="result-items">
+            <div
+              v-for="item in showCategoryResults('institution')"
+              :key="`inst-${item.id}`"
+              class="result-item"
+            >
+              <div class="item-content">
+                <div class="item-title">{{ item.name }}</div>
+                <div class="item-path" v-if="item.path">{{ item.path }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- 移除分页容器 -->
     </div>
   </div>
 </template>
@@ -149,15 +160,20 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import { Folder, Document } from "@element-plus/icons-vue";
+import { Document, Folder } from "@element-plus/icons-vue";
 import { searchLibrary } from "@/api/load";
+import {
+  FileOutlined,
+  UserOutlined,
+  BankOutlined,
+} from "@ant-design/icons-vue";
 
 // 定义搜索结果类型
 interface SearchResult {
   id: string | number;
   name: string;
-  type: "document" | "folder";
-  matchField?: string; // 修改为接受任意字符串，而不是限定的联合类型
+  type: "document" | "folder" | "author" | "institution";
+  matchField?: string;
   path?: string;
 }
 
@@ -167,8 +183,10 @@ const loading = ref(true);
 const searchQuery = ref("");
 const searchResults = ref<SearchResult[]>([]);
 const activeFilter = ref("all");
-const currentPage = ref(1);
-const pageSize = ref(10);
+
+// 移除分页相关变量
+// const currentPage = ref(1);
+// const pageSize = ref(10;
 
 // 高级搜索相关参数
 const searchFields = ref<string[]>([]);
@@ -177,7 +195,7 @@ const documentType = ref("");
 const authorCount = ref("");
 const uploadTime = ref("");
 
-// 根据筛选条件过滤结果
+// 根据筛选条件过滤结果 - 修改为返回所有结果，不做分页处理
 const filteredResults = computed(() => {
   let results = searchResults.value;
 
@@ -186,12 +204,17 @@ const filteredResults = computed(() => {
     results = results.filter((item) => item.type === activeFilter.value);
   }
 
-  // 计算分页
-  const startIndex = (currentPage.value - 1) * pageSize.value;
-  const endIndex = startIndex + pageSize.value;
-
-  return results.slice(startIndex, endIndex);
+  // 不再做分页处理，返回全部结果
+  return results;
 });
+
+// 获取指定类别的结果
+const showCategoryResults = (category: string) => {
+  if (activeFilter.value !== "all" && activeFilter.value !== category) {
+    return [];
+  }
+  return searchResults.value.filter((item) => item.type === category);
+};
 
 // 判断是否有高级筛选
 const hasAdvancedFilters = computed(() => {
@@ -224,7 +247,9 @@ const performSearch = async () => {
 
     const response = await searchLibrary(searchQuery.value, searchParams);
     searchResults.value = response.data.data?.results || [];
-    currentPage.value = 1; // 重置分页
+
+    // 移除重置分页的代码
+    // currentPage.value = 1;
   } catch (error) {
     console.error("搜索失败", error);
     ElMessage.error("搜索失败，请稍后重试");
@@ -259,18 +284,18 @@ watch(
   { deep: true }
 );
 
-// 筛选结果
+// 筛选结果 - 移除重置页码的代码
 const filterResults = () => {
-  currentPage.value = 1; // 切换筛选时重置页码
+  // 切换筛选不再重置页码
+  // currentPage.value = 1;
 };
 
 // 处理点击项目
 const handleItemClick = (row: SearchResult) => {
-  if (row.type === "folder") {
-    router.push(`/folder/${row.id}`);
-  } else {
+  if (row.type === "document") {
     router.push(`/document/${row.id}`);
   }
+  // 其他类型暂不处理点击事件
 };
 
 // 获取匹配字段标签
@@ -452,28 +477,90 @@ onMounted(() => {
   justify-content: center;
 }
 
-.content-icon {
-  color: #4285f4;
+/* 分类结果样式 */
+.results-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.item-name {
+.result-category {
+  margin-bottom: 10px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.category-icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.document-icon {
+  color: #1890ff;
+}
+
+.author-icon {
+  color: #52c41a;
+}
+
+.institution-icon {
+  color: #722ed1;
+}
+
+.category-header h3 {
+  margin: 0;
+  font-size: 16px;
   font-weight: 500;
+  color: #202124;
 }
 
-.item-name.is-folder {
-  color: #4285f4;
+.result-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-item {
+  padding: 12px 16px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px dashed #f5f5f5;
 }
 
-.item-name.is-folder:hover {
-  text-decoration: underline;
+.result-item:hover {
+  background-color: #f5f7fa;
 }
 
-.pagination-container {
+.item-content {
+  flex: 1;
+}
+
+.item-title {
+  font-weight: 500;
+  color: #1890ff;
+  margin-bottom: 4px;
+}
+
+.item-path {
+  font-size: 12px;
+  color: #909399;
+}
+
+/* 移除分页容器样式 */
+/* .pagination-container {
   margin-top: 20px;
   display: flex;
   justify-content: center;
-}
+} */
 
 /* 高级搜索标签样式 */
 .search-tags {
