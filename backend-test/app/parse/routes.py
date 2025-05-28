@@ -8,6 +8,8 @@ import requests
 from PyPDF2 import PdfReader
 from flask import request, jsonify, current_app, g
 from werkzeug.utils import secure_filename
+from google import genai
+from openai import OpenAI
 
 from . import parse_bp
 from app.db import query_db, get_db, close_db
@@ -190,24 +192,179 @@ def extract_metadata_from_pdf(file_path):
         return None
 
 def extract_metadata_using_ai(file_path):
+    """
+    Extracts metadata from a PDF using an AI model.
+    """
+    ai_response_text_for_logging = ""
     try:
-        # TODO：实现AI读取
+        reader = PdfReader(file_path)
+        pdf_text = ""
+        num_pages_to_extract = min(5, len(reader.pages))
+        for i in range(num_pages_to_extract):
+            page = reader.pages[i]
+            extracted_page_text = page.extract_text()
+            if extracted_page_text:
+                pdf_text += extracted_page_text + "\n"
+
+        if not pdf_text.strip():
+            current_app.logger.warning(f"AI Metadata Extraction: No text could be extracted from PDF: {file_path}")
+            return {
+                "title": f"AI解析失败 (无文本内容): {os.path.basename(file_path).replace('.pdf', '')}",
+                "authors": [], "sequence": [], "institutions": [], "institution_location": [], "email": [],
+                "doi": None, "publishDate": None, "journal": None, "conference": None, "keywords": []
+            }
+
+        max_chars = 15000 
+        if len(pdf_text) > max_chars:
+            pdf_text = pdf_text[:max_chars]
+
+        prompt = f"""
+        You are an expert academic metadata extractor. Your task is to extract metadata from the provided text of a research paper.
+        Return the output STRICTLY as a single, valid JSON object. Do not include any explanatory text, comments, or markdown formatting (like ```json) before or after the JSON.
+
+        The JSON object must have the following keys:
+        - "title": (string) The main title of the paper. If not found, use null.
+        - "authors": (list of strings) Full names of the authors. If no authors are found, use an empty list [].
+        - "sequence": (list of strings) Corresponding sequence for each author (e.g., "first", "corresponding", "additional"). This list MUST be the same length as the "authors" list. Use an empty string "" for an author if their sequence is not specified. If "authors" is an empty list, this should also be an empty list.
+        - "institutions": (list of strings) Primary affiliation/institution for each author. This list MUST be the same length as the "authors" list. Use an empty string "" for an author if their institution is not specified. If "authors" is an empty list, this should also be an empty list.
+        - "institution_location": (list of strings) Location of the institution (e.g., "City, Country") for each author. This list MUST be the same length as the "authors" list. Use an empty string "" for an author if their institution location is not specified. If "authors" is an empty list, this should also be an empty list.
+        - "email": (list of strings) Email address for each author. This list MUST be the same length as the "authors" list. Use an empty string "" for an author if their email is not specified. If "authors" is an empty list, this should also be an empty list.
+        - "doi": (string) The Digital Object Identifier (e.g., "10.xxxx/yyyyy"). If not found, use null.
+        - "publishDate": (string) The publication date in YYYY-MM-DD format. If only year or year-month is available, normalize to YYYY-01-01 or YYYY-MM-01 respectively. If not found, use null.
+        - "journal": (string) The name of the journal, if the paper is a journal article. If not found or not applicable, use null.
+        - "conference": (string) The name of the conference, if the paper is a conference proceeding. If not found or not applicable, use null.
+        - "keywords": (list of strings) A list of keywords associated with the paper. If no keywords are found, use an empty list [].
+
+        Example for author-related fields:
+        If authors are ["John Doe", "Jane Smith"] and only John's sequence is "first" and Jane's email is "jane@example.com":
+        "authors": ["John Doe", "Jane Smith"],
+        "sequence": ["first", ""],
+        "institutions": ["", ""],
+        "institution_location": ["", ""],
+        "email": ["", "jane@example.com"]
+
+        Paper Text:
+        ---
+        {pdf_text}
+        ---
+        """
+
+        # --- THIS IS THE CRUCIAL PART ---
+        api_key = os.environ.get('GEMINI_KEY')
+        if not api_key:
+            current_app.logger.error("GEMINI_KEY environment variable not set.")
+            # Return a specific error or raise an exception
+            return {
+                "title": f"AI解析配置错误 (API Key Missing): {os.path.basename(file_path).replace('.pdf', '')}",
+                "authors": [], "sequence": [], "institutions": [], "institution_location": [], "email": [],
+                "doi": None, "publishDate": None, "journal": None, "conference": None, "keywords": []
+            }
+        client = genai.Client(api_key=api_key)
+        # --- END CRUCIAL PART ---
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-preview-05-20",
+            contents=prompt
+        )
+
+        ai_response_text_for_logging = response.text
+        direct_doi = extract_doi_from_text(pdf_text)
+
+        # client = OpenAI(api_key="sk-37fa9dd4d3bc4b268eeabd61ec348fc4", base_url="https://api.deepseek.com")
+
+        # response = client.chat.completions.create(
+        #     model="deepseek-chat",
+        #     messages=[
+        #         {"role": "system", "content": "You are a helpful assistant"},
+        #         {"role": "user", "content": prompt},
+        #     ],
+        #     stream=False
+        # )
+        # ai_response_text_for_logging = response.choices[0].message.content
+
+        processed_response_text = ai_response_text_for_logging.strip()
+        if processed_response_text.startswith("```json"):
+            processed_response_text = processed_response_text[7:]
+            if processed_response_text.endswith("```"):
+                processed_response_text = processed_response_text[:-3]
+        elif processed_response_text.startswith("```"):
+            processed_response_text = processed_response_text[3:]
+            if processed_response_text.endswith("```"):
+                processed_response_text = processed_response_text[:-3]
+        
+        extracted_data = json.loads(processed_response_text.strip())
+
+        final_doi = direct_doi
+        if final_doi is None:
+            final_doi = extracted_data.get("doi")
+        
+        default_title_if_missing = f"AI解析 标题缺失: {os.path.basename(file_path).replace('.pdf', '')}"
+        metadata = {
+            "title": extracted_data.get("title") if extracted_data.get("title") is not None else default_title_if_missing,
+            "authors": extracted_data.get("authors", []),
+            "sequence": extracted_data.get("sequence", []),
+            "institutions": extracted_data.get("institutions", []),
+            "institution_location": extracted_data.get("institution_location", []),
+            "email": extracted_data.get("email", []),
+            "doi": final_doi,
+            "publishDate": extracted_data.get("publishDate"),
+            "journal": extracted_data.get("journal"),
+            "conference": extracted_data.get("conference"),
+            "keywords": extracted_data.get("keywords", []),
+        }
+
+        num_authors = len(metadata["authors"]) if isinstance(metadata["authors"], list) else 0
+        if num_authors == 0:
+            metadata["authors"] = []
+            metadata["sequence"] = []
+            metadata["institutions"] = []
+            metadata["institution_location"] = []
+            metadata["email"] = []
+        else:
+            for key in ["sequence", "institutions", "institution_location", "email"]:
+                if not isinstance(metadata.get(key), list):
+                    metadata[key] = []
+                current_list = metadata[key]
+                while len(current_list) < num_authors:
+                    current_list.append("")
+                if len(current_list) > num_authors:
+                    metadata[key] = current_list[:num_authors]
+        
+        return metadata
+
+    except json.JSONDecodeError as e:
+        current_app.logger.error(f"AI元数据提取错误: Failed to parse JSON response from AI for file {file_path}. Error: {e}. Response snippet: {ai_response_text_for_logging[:500]}")
         return {
-            "title": f"AI解析: {os.path.basename(file_path).replace('.pdf', '')}",
-            "authors": ["作者1", "作者2"],
-            "sequence": ["first", "corresponding"],
-            "institutions": ["某大学", "某研究机构"],
-            "institution_location": ["城市, 国家", "城市, 国家"],
-            "email": ["author1@example.com", "author2@example.com"],
-            "doi": "10.xxxx/yyyyy",
-            "publishDate": "2023-01-01",
-            "journal": "示例期刊",
-            "conference": None,
-            "keywords": ["关键词1", "关键词2"],
+            "title": f"AI解析失败 (无效JSON): {os.path.basename(file_path).replace('.pdf', '')}",
+            "authors": [], "sequence": [], "institutions": [], "institution_location": [], "email": [],
+            "doi": None, "publishDate": None, "journal": None, "conference": None, "keywords": []
         }
     except Exception as e:
-        current_app.logger.error(f"AI元数据提取错误: {e}")
-        return None
+        current_app.logger.error(f"AI元数据提取错误: An unexpected error occurred for file {file_path}. Error: {e}", exc_info=True) # Added exc_info for more details
+        return {
+            "title": f"AI解析失败 (未知错误): {os.path.basename(file_path).replace('.pdf', '')}",
+            "authors": [], "sequence": [], "institutions": [], "institution_location": [], "email": [],
+            "doi": None, "publishDate": None, "journal": None, "conference": None, "keywords": []
+        }
+
+    # try:
+    #     # TODO：实现AI读取
+    #     return {
+    #         "title": f"AI解析: {os.path.basename(file_path).replace('.pdf', '')}",
+    #         "authors": ["作者1", "作者2"],
+    #         "sequence": ["first", "corresponding"],
+    #         "institutions": ["某大学", "某研究机构"],
+    #         "institution_location": ["城市, 国家", "城市, 国家"],
+    #         "email": ["author1@example.com", "author2@example.com"],
+    #         "doi": "10.xxxx/yyyyy",
+    #         "publishDate": "2023-01-01",
+    #         "journal": "示例期刊",
+    #         "conference": None,
+    #         "keywords": ["关键词1", "关键词2"],
+    #     }
+    # except Exception as e:
+    #     current_app.logger.error(f"AI元数据提取错误: {e}")
+    #     return None
 
 @parse_bp.route('/pdf', methods=['POST'])
 @login_required
