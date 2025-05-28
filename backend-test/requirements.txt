@@ -1,0 +1,11 @@
+Flask
+mysql-connector-python
+python-dotenv
+Flask-Bcrypt
+Flask-Cors # For handling Cross-Origin Resource Sharing
+PyJWT  # For JWT authentication
+pytest
+click
+Werkzeug
+pandas # For handling CSV/Excel data
+openpyxl # For Excel support with pandas
