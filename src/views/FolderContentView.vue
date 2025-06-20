@@ -74,14 +74,8 @@
                 </a>
                 <template #overlay>
                   <a-menu @click="({ key }) => handleMenuClick(key, record)">
-                    <a-menu-item key="rename">
+                    <a-menu-item v-if="record.type === 'folder'" key="rename">
                       <edit-outlined /> 重命名
-                    </a-menu-item>
-                    <a-menu-item
-                      v-if="record.type === 'document'"
-                      key="download"
-                    >
-                      <download-outlined /> 下载
                     </a-menu-item>
                     <a-menu-item
                       v-if="record.type === 'document'"
