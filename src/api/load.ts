@@ -18,10 +18,6 @@ import {
   userStatsData,
 } from "@/mock";
 
-// 判断是否为开发环境
-// const isDevelopment = process.env.NODE_ENV === "development";
-const isDevelopment = process.env.NODE_ENV === "not";
-
 /**
  * 获取用户ID
  * @returns 当前登录用户的ID或null
@@ -47,20 +43,6 @@ export const getCurrentUserId = (): string | null => {
  * @returns Promise 包含文件夹内容
  */
 export const getFolderContents = async (folderId: string | number) => {
-  // 如果是开发环境，使用模拟数据
-  if (isDevelopment) {
-    const mockData = mockGetFolderContents(folderId);
-    // 模拟 API 返回结构
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "获取成功",
-        data: mockData,
-      },
-    });
-  }
-
-  // 生产环境使用实际 API - 更新为正确的API路径
   try {
     const response = await axios.get(buildApiPath(`/folder/${folderId}`), {
       headers: getAuthHeaders(),
@@ -82,26 +64,6 @@ export const createFolder = async (params: {
   parentId: string | number;
   name: string;
 }) => {
-  // 如果是开发环境，模拟创建文件夹
-  if (isDevelopment) {
-    // console.log("[Dev Mode] 模拟创建文件夹:", params);
-    // 返回一个模拟的成功响应
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "创建成功",
-        data: {
-          id: Date.now(), // 使用时间戳作为临时 ID
-          name: params.name,
-          type: "folder",
-          createTime: new Date().toISOString().slice(0, 10),
-          parentId: params.parentId,
-        },
-      },
-    });
-  }
-
-  // 生产环境使用实际 API
   const userId = getCurrentUserId();
   try {
     const response = await axios.post(
@@ -129,22 +91,6 @@ export const renameFolder = async (params: {
   folderId: string | number;
   newName: string;
 }) => {
-  // 如果是开发环境，模拟重命名文件夹
-  if (isDevelopment) {
-    // console.log("[Dev Mode] 模拟重命名文件夹:", params);
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "重命名成功",
-        data: {
-          id: params.folderId,
-          name: params.newName,
-        },
-      },
-    });
-  }
-
-  // 生产环境使用实际 API
   try {
     const response = await axios.put(
       buildApiPath("/folder/rename"),
@@ -168,18 +114,6 @@ export const renameFolder = async (params: {
  * @returns Promise 包含删除结果
  */
 export const deleteFolder = async (folderId: string | number) => {
-  // 如果是开发环境，模拟删除文件夹
-  if (isDevelopment) {
-    // console.log("[Dev Mode] 模拟删除文件夹:", folderId);
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "删除成功",
-      },
-    });
-  }
-
-  // 生产环境使用实际 API
   try {
     const response = await axios.delete(buildApiPath(`/folder/${folderId}`), {
       headers: getAuthHeaders(),
@@ -203,24 +137,6 @@ export const deleteFolder = async (folderId: string | number) => {
  * @returns Promise 包含上传结果
  */
 export const uploadPdfFiles = async (files: File[], folderId?: string) => {
-  // 如果是开发环境，模拟上传文件
-  if (isDevelopment) {
-    // console.log("[Dev Mode] 模拟上传文件:", { files, folderId });
-    // 创建模拟的文件名列表
-    const uploadedFiles = files.map((file) => file.name);
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "上传成功",
-        data: {
-          files: uploadedFiles,
-          folderId,
-        },
-      },
-    });
-  }
-
-  // 生产环境使用实际 API
   const userId = getCurrentUserId();
   const formData = new FormData();
 
@@ -249,19 +165,6 @@ export const uploadPdfFiles = async (files: File[], folderId?: string) => {
  * @returns Promise 包含文件夹树结构
  */
 export const getFolderStructure = async () => {
-  // 如果是开发环境，使用模拟数据
-  if (isDevelopment) {
-    // console.log("[Dev Mode] 使用模拟数据获取文件夹结构");
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "获取成功",
-        data: folderData,
-      },
-    });
-  }
-
-  // 生产环境使用实际 API - 更新为正确的API路径
   try {
     const response = await axios.get(buildApiPath("/folder/tree"), {
       headers: getAuthHeaders(),
@@ -280,20 +183,6 @@ export const getFolderStructure = async () => {
  * @returns Promise 包含文档详情
  */
 export const getDocumentDetails = async (documentId: string | number) => {
-  // 如果是开发环境，使用模拟数据
-  if (isDevelopment) {
-    console.log("[Dev Mode] 使用模拟数据获取文档详情:", documentId);
-    const mockDoc = mockGetDocumentDetails(documentId);
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "获取成功",
-        data: mockDoc,
-      },
-    });
-  }
-
-  // 生产环境使用实际 API - 更新为正确的API路径
   try {
     const response = await axios.get(buildApiPath(`/document/${documentId}`), {
       headers: getAuthHeaders(),
@@ -312,18 +201,6 @@ export const getDocumentDetails = async (documentId: string | number) => {
  * @returns Promise 包含删除结果
  */
 export const deleteDocument = async (documentId: string | number) => {
-  // 如果是开发环境，模拟删除文档
-  if (isDevelopment) {
-    console.log("[Dev Mode] 模拟删除文档:", documentId);
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "删除成功",
-      },
-    });
-  }
-
-  // 生产环境使用实际 API
   try {
     const response = await axios.delete(
       buildApiPath(`/document/${documentId}`),
@@ -349,22 +226,6 @@ export const updateDocumentMetadata = async (
   documentId: string | number,
   metadata: any
 ) => {
-  // 如果是开发环境，模拟更新文档元数据
-  if (isDevelopment) {
-    console.log("[Dev Mode] 模拟更新文档元数据:", documentId, metadata);
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "更新成功",
-        data: {
-          id: documentId,
-          ...metadata,
-        },
-      },
-    });
-  }
-
-  // 生产环境使用实际 API
   try {
     const response = await axios.put(
       buildApiPath(`/document/${documentId}/metadata`),
@@ -383,19 +244,6 @@ export const updateDocumentMetadata = async (
  * @returns Promise 包含用户统计信息
  */
 export const getUserStats = async () => {
-  // 如果是开发环境，使用模拟数据
-  if (isDevelopment) {
-    console.log("[Dev Mode] 使用模拟数据获取用户统计");
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "获取成功",
-        data: userStatsData,
-      },
-    });
-  }
-
-  // 生产环境使用实际 API
   try {
     const response = await axios.get(buildApiPath(`/user/stats`), {
       headers: getAuthHeaders(),
@@ -415,30 +263,6 @@ export const getUserStats = async () => {
  * @returns Promise 包含搜索结果
  */
 export const searchLibrary = async (query: string, advancedParams?: any) => {
-  // 如果是开发环境，使用模拟数据
-  if (isDevelopment) {
-    console.log("[Dev Mode] 使用模拟数据搜索:", query, advancedParams);
-    // ...使用模拟数据
-    // 获取模拟搜索结果
-    const results = searchResultData[query] || [];
-
-    // 如果有高级搜索参数，应用简单的过滤
-    if (advancedParams && Object.keys(advancedParams).length > 0) {
-      console.log("[Dev Mode] 应用高级搜索参数:", advancedParams);
-    }
-
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "搜索成功",
-        data: {
-          results,
-        },
-      },
-    });
-  }
-
-  // 生产环境使用实际API
   try {
     // 修改搜索API调用，使用URL参数传递token而不是Authorization头
     const token = localStorage.getItem("token");
@@ -449,7 +273,7 @@ export const searchLibrary = async (query: string, advancedParams?: any) => {
       ...advancedParams,
     };
 
-    console.log("搜索参数:", params);
+    // console.log("搜索参数:", params);
 
     // 发起符合"简单请求"条件的请求
     const response = await axios.get(buildApiPath("/search"), {
@@ -473,47 +297,6 @@ export const searchLibrary = async (query: string, advancedParams?: any) => {
  * @returns Promise 包含作者详情
  */
 export const getAuthorDetails = async (authorId: string | number) => {
-  // 如果是开发环境，使用模拟数据
-  if (isDevelopment) {
-    console.log("[Dev Mode] 使用模拟数据获取作者详情:", authorId);
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "获取成功",
-        data: {
-          id: authorId,
-          name: "作者示例",
-          email: "author@example.com",
-          institutions: [
-            {
-              institution_id: 1,
-              institution_name: "示例大学",
-              institution_location: "示例城市",
-            },
-          ],
-          documents: [
-            {
-              document_id: 1,
-              title: "示例文献1",
-              publication_date: "2023-01-01",
-              sequence: "first",
-              directory_name: "根文件夹",
-            },
-            {
-              document_id: 2,
-              title: "示例文献2",
-              publication_date: "2023-02-01",
-              sequence: "corresponding",
-              directory_name: "根文件夹",
-            },
-          ],
-          documentCount: 2,
-        },
-      },
-    });
-  }
-
-  // 生产环境使用实际API
   try {
     const response = await axios.get(buildApiPath(`/author/${authorId}`), {
       headers: getAuthHeaders(),
@@ -532,36 +315,6 @@ export const getAuthorDetails = async (authorId: string | number) => {
  * @returns Promise 包含机构详情
  */
 export const getInstitutionDetails = async (institutionId: string | number) => {
-  // 如果是开发环境，使用模拟数据
-  if (isDevelopment) {
-    console.log("[Dev Mode] 使用模拟数据获取机构详情:", institutionId);
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "获取成功",
-        data: {
-          id: institutionId,
-          name: "示例机构",
-          location: "示例地址",
-          authors: [
-            {
-              author_id: 1,
-              author_name: "作者1",
-              author_email: "author1@example.com",
-            },
-            {
-              author_id: 2,
-              author_name: "作者2",
-              author_email: "author2@example.com",
-            },
-          ],
-          authorCount: 2,
-        },
-      },
-    });
-  }
-
-  // 生产环境使用实际API
   try {
     const response = await axios.get(
       buildApiPath(`/institution/${institutionId}`),
@@ -583,41 +336,6 @@ export const getInstitutionDetails = async (institutionId: string | number) => {
  * @returns Promise 包含容器详情及相关文献
  */
 export const getContainerDetails = async (containerId: string | number) => {
-  // 如果是开发环境，使用模拟数据
-  if (isDevelopment) {
-    console.log("[Dev Mode] 使用模拟数据获取容器详情:", containerId);
-    return Promise.resolve({
-      data: {
-        code: 0,
-        message: "获取成功",
-        data: {
-          id: containerId,
-          name: "示例期刊/会议",
-          type: Math.random() > 0.5 ? "journal" : "conference",
-          journalIssue: "Vol. 1, Issue 2",
-          conferenceTime: "2023-05-15",
-          conferenceLocation: "上海",
-          documents: [
-            {
-              document_id: 1,
-              title: "示例文献1",
-              publication_date: "2023-01-01",
-              directory_name: "根文件夹",
-            },
-            {
-              document_id: 2,
-              title: "示例文献2",
-              publication_date: "2023-02-01",
-              directory_name: "根文件夹",
-            },
-          ],
-          documentCount: 2,
-        },
-      },
-    });
-  }
-
-  // 生产环境使用实际API
   try {
     const response = await axios.get(
       buildApiPath(`/container/${containerId}`),

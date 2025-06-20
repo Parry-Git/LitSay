@@ -816,7 +816,7 @@ async function handlePdfUpload() {
           }),
         });
       }
-      console.log("解析结果：", parseResults);
+      // console.log("解析结果：", parseResults);
     }
 
     // 关闭加载提示
@@ -960,7 +960,7 @@ async function handleConfirmUpload() {
     });
 
     // 调用API只上传元数据
-    console.log("准备上传的元数据：", metadataToUpload);
+    // console.log("准备上传的元数据：", metadataToUpload);
     const response = await saveMetadataOnly(
       metadataToUpload,
       selectedFolderId.value
@@ -1051,7 +1051,7 @@ async function handleMetadataUpload() {
       uploading.value = false;
       return;
     }
-    console.log("===解析后的元数据：", allMetadata);
+    // console.log("===解析后的元数据：", allMetadata);
 
     // 调用API上传解析后的元数据
     const response = await saveBatchMetadata(

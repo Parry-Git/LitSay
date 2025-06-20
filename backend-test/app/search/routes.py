@@ -55,9 +55,9 @@ def search_library():
     
     document_type = request.args.get('type', '')
     
-    print(f"高级搜索参数: query={query}, use_regex={use_regex}, search_fields={search_fields}, " 
-          f"date_from={date_from}, date_to={date_to}, keywords_and={keywords_and}, keywords_or={keywords_or}, "
-          f"document_type={document_type}")
+    # print(f"高级搜索参数: query={query}, use_regex={use_regex}, search_fields={search_fields}, "
+    #       f"date_from={date_from}, date_to={date_to}, keywords_and={keywords_and}, keywords_or={keywords_or}, "
+    #       f"document_type={document_type}")
     
     # 验证搜索参数，修改为允许高级搜索时不提供查询内容
     has_advanced_filters = keywords_and or keywords_or or date_from or date_to or document_type

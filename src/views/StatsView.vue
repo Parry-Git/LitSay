@@ -176,7 +176,7 @@ const authorsStarsTop = ref<Array<{ author: string; stars: number | null }>>(
 
 // 添加计算属性，检查是否所有作者都没有星级评分
 const allAuthorsHaveNullStars = computed(() => {
-  console.log("检查作者星级数据:", authorsStarsTop.value);
+  // console.log("检查作者星级数据:", authorsStarsTop.value);
   return (
     authorsStarsTop.value.length > 0 &&
     authorsStarsTop.value.every((item) => item.stars === null)
@@ -339,13 +339,13 @@ const initCharts = () => {
     ],
   };
 
-  console.log("关键词图表配置:", keywordsOption);
+  // console.log("关键词图表配置:", keywordsOption);
   keywordsChart.setOption(keywordsOption);
 
-  console.log("初始化作者星级图表...");
+  // console.log("初始化作者星级图表...");
   // 处理作者星级数据，替换null值
   const processedAuthorsData = processAuthorsStarsData();
-  console.log("处理后的作者星级数据:", processedAuthorsData);
+  // console.log("处理后的作者星级数据:", processedAuthorsData);
 
   // 初始化作者星级图表
   authorsChart = echarts.init(authorsChartContainer.value);
@@ -439,7 +439,7 @@ const handleResize = () => {
 };
 
 onMounted(() => {
-  console.log("StatsView组件已挂载，开始获取数据...");
+  // console.log("StatsView组件已挂载，开始获取数据...");
   fetchStatsData();
   window.addEventListener("resize", handleResize);
 });

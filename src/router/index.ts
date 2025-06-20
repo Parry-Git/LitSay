@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
-import HomeView from "../views/HomeView.vue";
 import { ElMessage } from "element-plus";
 
 const routes: Array<RouteRecordRaw> = [
@@ -30,7 +29,6 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/UploadView.vue"),
     meta: { requiresAuth: true }, // 需要认证
   },
-  // 添加新的文件夹内容路由
   {
     path: "/folder/:id",
     name: "folder-content",

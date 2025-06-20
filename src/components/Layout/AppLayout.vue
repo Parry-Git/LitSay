@@ -515,7 +515,7 @@ const performAdvancedSearch = () => {
     ElMessage.warning("请至少输入搜索内容、关键词或选择日期范围");
     return;
   }
-  console.log("执行高级搜索，参数：", advancedParams);
+  // console.log("执行高级搜索，参数：", advancedParams);
 
   // 跳转到搜索结果页面，带上高级搜索参数
   router.push({

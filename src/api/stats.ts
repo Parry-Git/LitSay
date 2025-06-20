@@ -7,11 +7,9 @@ import { API_BASE_URL, buildApiPath, getAuthHeaders } from "./config";
  */
 export const getStatsOverview = async () => {
   try {
-    console.log("正在请求统计概览数据...");
     const response = await axios.get(buildApiPath("/stats/overview"), {
       headers: getAuthHeaders(),
     });
-    console.log("获取统计概览数据成功:", response.data);
     return response.data;
   } catch (error) {
     console.error("获取统计概览数据失败", error);
@@ -25,12 +23,10 @@ export const getStatsOverview = async () => {
  */
 export const getKeywordsTop = async () => {
   try {
-    console.log("正在请求关键词TOP5数据...");
     const response = await axios.get(buildApiPath("/stats/keywords/top"), {
       headers: getAuthHeaders(),
       params: { limit: 5 },
     });
-    console.log("获取关键词TOP5数据成功:", response.data);
     return response.data;
   } catch (error) {
     console.error("获取关键词统计数据失败", error);
@@ -44,12 +40,10 @@ export const getKeywordsTop = async () => {
  */
 export const getAuthorsStarsTop = async () => {
   try {
-    console.log("正在请求作者星级TOP5数据...");
     const response = await axios.get(buildApiPath("/stats/authors/stars"), {
       headers: getAuthHeaders(),
       params: { limit: 5 },
     });
-    console.log("获取作者星级TOP5数据成功:", response.data);
     return response.data;
   } catch (error) {
     console.error("获取作者星级统计数据失败", error);
