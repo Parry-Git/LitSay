@@ -6,6 +6,6 @@ export const folderChangedBus = useEventBus<void>("folder-changed");
 
 // 触发文件夹更新事件
 export function notifyFolderStructureChanged() {
-  console.log("触发文件夹结构更新事件");
+  // console.log("触发文件夹结构更新事件");
   folderChangedBus.emit();
 }

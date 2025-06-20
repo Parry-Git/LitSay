@@ -54,7 +54,7 @@ def get_metadata_from_crossref(doi):
         response = requests.get(url, headers=headers)
         
         if response.status_code != 200:
-            current_app.logger.error(f"Crossref API error: {response.status_code}")
+            # print(f"Crossref API error: {response.status_code}")
             return None, time.time() - start_time
         
         data = response.json()
@@ -232,7 +232,10 @@ def extract_metadata_using_ai(file_path):
         - "doi": (string) The Digital Object Identifier (e.g., "10.xxxx/yyyyy"). If not found, use null.
         - "publishDate": (string) The publication date in YYYY-MM-DD format. If only year or year-month is available, normalize to YYYY-01-01 or YYYY-MM-01 respectively. If not found, use null.
         - "journal": (string) The name of the journal, if the paper is a journal article. If not found or not applicable, use null.
+        - "journal_issue": (string) The issue of the journal, if available. If not found or not applicable, use null.
         - "conference": (string) The name of the conference, if the paper is a conference proceeding. If not found or not applicable, use null.
+        - "conference_location": (string) The location of the conference, if available. If not found or not applicable, use null.
+        - "conference_time": (string) The date of the conference in YYYY-MM-DD format, if available. If not found or not applicable, use null.
         - "keywords": (list of strings) A list of keywords associated with the paper. If no keywords are found, use an empty list [].
 
         Example for author-related fields:
@@ -263,7 +266,9 @@ def extract_metadata_using_ai(file_path):
         # --- END CRUCIAL PART ---
         
         response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-05-20",
+            model="gemini-2.5-flash",
+            # model="gemini-2.5-flash-preview-05-20",
+            # model="gemini-2.0-flash-lite",
             contents=prompt
         )
 
@@ -309,6 +314,9 @@ def extract_metadata_using_ai(file_path):
             "doi": final_doi,
             "publishDate": extracted_data.get("publishDate"),
             "journal": extracted_data.get("journal"),
+            "journal_issue": extracted_data.get("journal_issue"),
+            "conference_location": extracted_data.get("conference_location"),
+            "conference_time": extracted_data.get("conference_time"),
             "conference": extracted_data.get("conference"),
             "keywords": extracted_data.get("keywords", []),
         }
@@ -346,25 +354,6 @@ def extract_metadata_using_ai(file_path):
             "authors": [], "sequence": [], "institutions": [], "institution_location": [], "email": [],
             "doi": None, "publishDate": None, "journal": None, "conference": None, "keywords": []
         }
-
-    # try:
-    #     # TODO：实现AI读取
-    #     return {
-    #         "title": f"AI解析: {os.path.basename(file_path).replace('.pdf', '')}",
-    #         "authors": ["作者1", "作者2"],
-    #         "sequence": ["first", "corresponding"],
-    #         "institutions": ["某大学", "某研究机构"],
-    #         "institution_location": ["城市, 国家", "城市, 国家"],
-    #         "email": ["author1@example.com", "author2@example.com"],
-    #         "doi": "10.xxxx/yyyyy",
-    #         "publishDate": "2023-01-01",
-    #         "journal": "示例期刊",
-    #         "conference": None,
-    #         "keywords": ["关键词1", "关键词2"],
-    #     }
-    # except Exception as e:
-    #     current_app.logger.error(f"AI元数据提取错误: {e}")
-    #     return None
 
 @parse_bp.route('/pdf', methods=['POST'])
 @login_required
@@ -450,6 +439,8 @@ def parse_pdf_metadata_with_ai():
             # 清理临时文件
             os.remove(file_path)
             
+            # print(f"AI解析结果: {metadata}")  # 调试输出
+            
             if metadata:
                 return jsonify({
                     "success": True,
@@ -467,341 +458,3 @@ def parse_pdf_metadata_with_ai():
             return jsonify({"error": "服务器错误", "message": f"AI处理文件时出错: {str(e)}"}), 500
     
     return jsonify({"error": "不支持的文件类型", "message": "仅支持PDF文件"}), 400
-
-@parse_bp.route('/metadata', methods=['POST'])
-@login_required
-def process_metadata_file():
-    """处理元数据文件（JSON、CSV、XLSX）"""
-    # TODO：实现批量读取，下面全是AI写的。。。后续要改改
-    if 'file' not in request.files:
-        return jsonify({"error": "没有文件", "message": "请求中没有文件"}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "没有选择文件", "message": "未选择任何文件"}), 400
-    
-    if file and allowed_file(file.filename, ALLOWED_METADATA_EXTENSIONS):
-        try:
-            # 根据文件类型读取元数据
-            if file.filename.endswith('.json'):
-                metadata = json.load(file)
-            elif file.filename.endswith('.csv'):
-                df = pd.read_csv(file)
-                metadata = df.to_dict(orient='records')
-            elif file.filename.endswith('.xlsx'):
-                df = pd.read_excel(file)
-                metadata = df.to_dict(orient='records')
-            else:
-                return jsonify({"error": "不支持的文件格式", "message": "不支持的元数据文件格式"}), 400
-            
-            return jsonify({
-                "success": True,
-                "fileName": file.filename,
-                "metadata": metadata,
-                "recordCount": len(metadata)
-            }), 200
-                
-        except Exception as e:
-            current_app.logger.error(f"元数据文件处理错误: {e}")
-            return jsonify({"error": "服务器错误", "message": f"处理元数据文件时出错: {str(e)}"}), 500
-    
-    return jsonify({"error": "不支持的文件类型", "message": "仅支持JSON、CSV和XLSX文件"}), 400
-
-# @parse_bp.route('/upload/pdf-with-metadata', methods=['POST'])
-# @login_required
-# def upload_pdf_with_metadata():
-    """上传PDF文件并存储解析后的元数据"""
-    if 'files[0]' not in request.files:
-        return jsonify({"error": "没有文件", "message": "请求中没有文件"}), 400
-    
-    # 获取请求参数
-    user_id = g.current_user['user_id']
-    folder_id = request.form.get('folderId')
-    
-    if not folder_id:
-        return jsonify({"error": "参数错误", "message": "必须提供文件夹ID"}), 400
-    
-    # 获取上传的文件和元数据
-    uploaded_files = []
-    file_count = 0
-    
-    while f'files[{file_count}]' in request.files:
-        file = request.files[f'files[{file_count}]']
-        metadata_str = request.form.get(f'metadata[{file_count}]')
-        
-        if not metadata_str:
-            return jsonify({"error": "参数错误", "message": f"文件 {file_count} 缺少元数据"}), 400
-        
-        try:
-            metadata = json.loads(metadata_str)
-        except Exception:
-            return jsonify({"error": "参数错误", "message": f"文件 {file_count} 的元数据格式无效"}), 400
-        
-        if file.filename and allowed_file(file.filename, ALLOWED_PDF_EXTENSIONS):
-            # 保存文件
-            filename = secure_filename(file.filename)
-            
-            # 创建用户文件目录
-            user_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], str(user_id), folder_id)
-            os.makedirs(user_dir, exist_ok=True)
-            
-            # 处理文件名冲突
-            base_name, ext = os.path.splitext(filename)
-            counter = 1
-            final_filename = filename
-            
-            while os.path.exists(os.path.join(user_dir, final_filename)):
-                final_filename = f"{base_name}_{counter}{ext}"
-                counter += 1
-            
-            file_path = os.path.join(user_dir, final_filename)
-            file.save(file_path)
-            
-            # 存储元数据到数据库
-            try:
-                # 从元数据中提取信息
-                title = metadata.get('title', '')
-                doi = metadata.get('doi')
-                publish_date = metadata.get('publishDate')
-                journal = metadata.get('journal')
-                conference = metadata.get('conference')
-                
-                # 创建文档记录
-                sql = """
-                INSERT INTO document (directory_id, user_id, title, doi, local_url, publication_date, journal, conference)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                local_url = os.path.relpath(file_path, current_app.config['UPLOAD_FOLDER'])
-                args = (folder_id, user_id, title, doi, local_url, publish_date, journal, conference)
-                
-                document_id = query_db(sql, args, commit=True)
-                
-                # 处理作者信息
-                if 'authors' in metadata and isinstance(metadata['authors'], list):
-                    for i, author_name in enumerate(metadata['authors']):
-                        if not author_name:  # 跳过空作者
-                            continue
-                        
-                        # 获取其他作者相关字段
-                        sequence = metadata.get('sequence', [])[i] if i < len(metadata.get('sequence', [])) else None
-                        institution = metadata.get('institutions', [])[i] if i < len(metadata.get('institutions', [])) else None
-                        location = metadata.get('institution_location', [])[i] if i < len(metadata.get('institution_location', [])) else None
-                        email = metadata.get('email', [])[i] if i < len(metadata.get('email', [])) else None
-                        
-                        # 查找或创建作者
-                        author_id = query_db(
-                            "SELECT author_id FROM author WHERE author_name = %s AND user_id = %s",
-                            (author_name, user_id),
-                            one=True
-                        )
-                        
-                        if not author_id:
-                            author_id = query_db(
-                                "INSERT INTO author (author_name, user_id) VALUES (%s, %s)",
-                                (author_name, user_id),
-                                commit=True
-                            )
-                        else:
-                            author_id = author_id['author_id']
-                        
-                        # 关联作者与文档
-                        query_db(
-                            "INSERT INTO document_author (document_id, author_id, sequence, institution, location, email) VALUES (%s, %s, %s, %s, %s, %s)",
-                            (document_id, author_id, sequence, institution, location, email),
-                            commit=True
-                        )
-                
-                # 处理关键词
-                if 'keywords' in metadata and isinstance(metadata['keywords'], list):
-                    for keyword in metadata['keywords']:
-                        if not keyword:  # 跳过空关键词
-                            continue
-                        
-                        # 查找或创建关键词
-                        keyword_id = query_db(
-                            "SELECT keyword_id FROM keyword WHERE keyword_name = %s AND user_id = %s",
-                            (keyword, user_id),
-                            one=True
-                        )
-                        
-                        if not keyword_id:
-                            keyword_id = query_db(
-                                "INSERT INTO keyword (keyword_name, user_id) VALUES (%s, %s)",
-                                (keyword, user_id),
-                                commit=True
-                            )
-                        else:
-                            keyword_id = keyword_id['keyword_id']
-                        
-                        # 关联关键词与文档
-                        query_db(
-                            "INSERT INTO document_keyword (document_id, keyword_id) VALUES (%s, %s)",
-                            (document_id, keyword_id),
-                            commit=True
-                        )
-                
-                uploaded_files.append({
-                    "filename": final_filename,
-                    "document_id": document_id
-                })
-                
-            except Exception as e:
-                current_app.logger.error(f"存储元数据错误: {e}")
-                # 出错时删除已保存的文件
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                return jsonify({"error": "数据库错误", "message": f"存储元数据时出错: {str(e)}"}), 500
-        
-        file_count += 1
-    
-    if not uploaded_files:
-        return jsonify({"error": "没有有效文件", "message": "没有有效的PDF文件被上传"}), 400
-    
-    return jsonify({
-        "message": f"成功上传 {len(uploaded_files)} 个文件及其元数据",
-        "files": [item['filename'] for item in uploaded_files]
-    }), 200
-
-# @parse_bp.route('/upload/metadata', methods=['POST'])
-# @login_required
-# def upload_metadata():
-    """批量导入元数据文件"""
-    if not request.files:
-        return jsonify({"error": "没有文件", "message": "请求中没有文件"}), 400
-    
-    # 获取请求参数
-    user_id = g.current_user['user_id']
-    folder_id = request.form.get('folderId')
-    
-    if not folder_id:
-        return jsonify({"error": "参数错误", "message": "必须提供文件夹ID"}), 400
-    
-    imported_count = 0
-    file_results = []
-    
-    for key in request.files:
-        file = request.files[key]
-        
-        if not file.filename:
-            continue
-        
-        if allowed_file(file.filename, ALLOWED_METADATA_EXTENSIONS):
-            try:
-                # 根据文件类型读取元数据
-                if file.filename.endswith('.json'):
-                    metadata_list = json.load(file)
-                    if not isinstance(metadata_list, list):
-                        metadata_list = [metadata_list]
-                elif file.filename.endswith('.csv'):
-                    df = pd.read_csv(file)
-                    metadata_list = df.to_dict(orient='records')
-                elif file.filename.endswith('.xlsx'):
-                    df = pd.read_excel(file)
-                    metadata_list = df.to_dict(orient='records')
-                else:
-                    continue
-                
-                # 处理每条元数据记录
-                for metadata in metadata_list:
-                    # 从元数据中提取必要信息
-                    title = metadata.get('title')
-                    if not title:  # 跳过没有标题的记录
-                        continue
-                    
-                    try:
-                        # 创建文档记录
-                        document_id = query_db(
-                            """INSERT INTO document 
-                               (directory_id, user_id, title, doi, publication_date, journal, conference)
-                               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                            (folder_id, user_id, title, metadata.get('doi'), metadata.get('publishDate'), 
-                             metadata.get('journal'), metadata.get('conference')),
-                            commit=True
-                        )
-                        
-                        # 处理作者 (如果存在)
-                        authors = metadata.get('authors', [])
-                        if isinstance(authors, list):
-                            for i, author_name in enumerate(authors):
-                                if not author_name:
-                                    continue
-                                    
-                                # 查找或创建作者
-                                author_id = query_db(
-                                    "SELECT author_id FROM author WHERE author_name = %s AND user_id = %s",
-                                    (author_name, user_id),
-                                    one=True
-                                )
-                                
-                                if not author_id:
-                                    author_id = query_db(
-                                        "INSERT INTO author (author_name, user_id) VALUES (%s, %s)",
-                                        (author_name, user_id),
-                                        commit=True
-                                    )
-                                else:
-                                    author_id = author_id['author_id']
-                                
-                                # 关联作者与文档
-                                query_db(
-                                    "INSERT INTO document_author (document_id, author_id) VALUES (%s, %s)",
-                                    (document_id, author_id),
-                                    commit=True
-                                )
-                        
-                        # 处理关键词 (如果存在)
-                        keywords = metadata.get('keywords', [])
-                        if isinstance(keywords, list):
-                            for keyword in keywords:
-                                if not keyword:
-                                    continue
-                                    
-                                # 查找或创建关键词
-                                keyword_id = query_db(
-                                    "SELECT keyword_id FROM keyword WHERE keyword_name = %s AND user_id = %s",
-                                    (keyword, user_id),
-                                    one=True
-                                )
-                                
-                                if not keyword_id:
-                                    keyword_id = query_db(
-                                        "INSERT INTO keyword (keyword_name, user_id) VALUES (%s, %s)",
-                                        (keyword, user_id),
-                                        commit=True
-                                    )
-                                else:
-                                    keyword_id = keyword_id['keyword_id']
-                                
-                                # 关联关键词与文档
-                                query_db(
-                                    "INSERT INTO document_keyword (document_id, keyword_id) VALUES (%s, %s)",
-                                    (document_id, keyword_id),
-                                    commit=True
-                                )
-                        
-                        imported_count += 1
-                        
-                    except Exception as e:
-                        current_app.logger.error(f"导入元数据记录错误: {e}")
-                        # 继续处理下一条记录
-                
-                file_results.append({
-                    "filename": file.filename,
-                    "recordCount": len(metadata_list)
-                })
-                
-            except Exception as e:
-                current_app.logger.error(f"处理元数据文件错误: {e}")
-                # 继续处理下一个文件
-    
-    if imported_count == 0:
-        return jsonify({
-            "message": "没有成功导入任何元数据记录",
-            "importedCount": 0
-        }), 400
-    
-    return jsonify({
-        "message": f"成功导入 {imported_count} 条元数据记录",
-        "importedCount": imported_count,
-        "files": [item['filename'] for item in file_results]
-    }), 200

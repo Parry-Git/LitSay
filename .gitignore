@@ -6,8 +6,6 @@ node_modules
 # local env files
 .env.local
 .env.*.local
-.env
-.flaskenv
 *.pyc
 
 # Log files

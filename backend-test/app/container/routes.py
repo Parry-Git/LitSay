@@ -21,15 +21,17 @@ def get_container_detail(container_id):
         if not container:
             return jsonify({"error": "未找到", "message": "期刊/会议不存在或无权访问"}), 404
         
-        # 获取容器关联的所有文献
+        container_name = container['container_name']
+        # 获取容器关联的所有文献，注意此处通过container_name而不是container_id
+        # 以便支持同名容器的情况
         documents = query_db("""
-            SELECT d.document_id, d.title, d.doi, d.publication_date,
-                  dir.directory_name, dir.directory_id
+            SELECT d.document_id, d.title, d.doi, d.publication_date, c.container_name, 
+            c.journal_issue, c.conference_time, c.conference_location
             FROM document d
-            JOIN directory dir ON d.directory_id = dir.directory_id
-            WHERE d.container_id = %s AND d.user_id = %s
+            JOIN container c ON d.container_id = c.container_id
+            WHERE c.container_name = %s AND d.user_id = %s
             ORDER BY d.publication_date DESC
-        """, (container_id, user_id))
+        """, (container_name, user_id))
         
         # 构建响应数据
         result = {

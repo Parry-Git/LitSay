@@ -21,13 +21,18 @@ export const login = async (username: string, password: string) => {
     );
 
     const responseData = response.data;
-    console.log("登录API响应:", responseData);
+    // console.log("登录API响应:", responseData);
 
     let token, user;
 
     if (responseData.access_token) {
       token = responseData.access_token;
-      user = responseData.user;
+      user = {
+        id: responseData.user_id,
+        username: responseData.username,
+        role: responseData.role,
+      };
+      // console.log(user);
     } else if (responseData.data && responseData.data.access_token) {
       token = responseData.data.access_token;
       user = responseData.data.user;
@@ -35,12 +40,12 @@ export const login = async (username: string, password: string) => {
 
     if (token) {
       localStorage.setItem("token", token);
-      console.log("API - Token已存储:", token);
+      // console.log("API - Token已存储:", token);
     }
 
     if (user) {
       localStorage.setItem("userInfo", JSON.stringify(user));
-      console.log("API - 用户信息已存储:", user);
+      // console.log("API - 用户信息已存储:", user);
     }
 
     return responseData;

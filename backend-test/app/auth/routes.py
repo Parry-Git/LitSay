@@ -48,7 +48,7 @@ def login():
             'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=current_app.config['JWT_EXPIRATION_DELTA_SECONDS'])
         }
         token = jwt.encode(token_payload, current_app.config['JWT_SECRET_KEY'], algorithm=current_app.config['JWT_ALGORITHM'])
-        return jsonify({"message": "Login successful.", "access_token": token, "user_id": user['user_id'], "username": user['user_name']}), 200
+        return jsonify({"message": "Login successful.", "access_token": token, "user_id": user['user_id'], "username": user['user_name'], "role": user['role']}), 200
     else:
         return jsonify({"error": "Authentication Failed", "message": "Invalid username or password."}), 401
 

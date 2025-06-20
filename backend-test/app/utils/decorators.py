@@ -34,3 +34,24 @@ def login_required(f):
 
         return f(*args, **kwargs)
     return decorated
+
+def admin_required(f):
+    """检查用户是否为管理员的装饰器"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # 确保用户已登录
+        if not hasattr(g, 'current_user'):
+            return jsonify({
+                "error": "Authentication Error", 
+                "message": "未认证，请先登录"
+            }), 401
+        
+        # 检查用户角色
+        if g.current_user['role'] != 1:  # 1表示管理员
+            return jsonify({
+                "error": "Permission Denied", 
+                "message": "需要管理员权限"
+            }), 403
+        
+        return f(*args, **kwargs)
+    return decorated

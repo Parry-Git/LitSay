@@ -182,7 +182,7 @@ const fetchFolderTree = async () => {
 
 // 刷新文件夹树结构 - 用于手动刷新或接收到更新事件后刷新
 const refreshFolderTree = () => {
-  console.log("刷新文件夹树结构");
+  // console.log("刷新文件夹树结构");
   fetchFolderTree();
 };
 
@@ -349,7 +349,7 @@ onMounted(() => {
 
   // 订阅文件夹结构变更事件
   folderChangedBus.on(() => {
-    console.log("FolderTree 组件收到文件夹结构变更事件，正在刷新...");
+    // console.log("FolderTree 组件收到文件夹结构变更事件，正在刷新...");
     refreshFolderTree();
   });
 });

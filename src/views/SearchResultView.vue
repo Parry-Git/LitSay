@@ -281,7 +281,7 @@ const performSearch = async () => {
       keywordsAnd: keywordsAnd.value,
       keywordsOr: keywordsOr.value,
     };
-    console.log("搜索值:", searchQuery.value);
+    // console.log("搜索值:", searchQuery.value);
 
     const response = await searchLibrary(searchQuery.value, searchParams);
     searchResults.value = response.data.data?.results || [];

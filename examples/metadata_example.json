@@ -1,0 +1,69 @@
+[
+  {
+    "title": "机器学习算法综述",
+    "authors": ["张明", "李华", "王强"],
+    "sequence": ["first", "corresponding", "additional"],
+    "institutions": ["北京大学", "清华大学", "复旦大学"],
+    "institution_location": ["北京市", "北京市", "上海市"],
+    "email": ["zhang@example.com", "li@example.com", "wang@example.com"],
+    "doi": "10.1234/ml.review.2023",
+    "publishDate": "2023-02-15",
+    "journal": "计算机研究与发展",
+    "journal_issue": "Vol. 45, No. 3",
+    "keywords": ["机器学习", "人工智能", "算法"]
+  },
+  {
+    "title": "图神经网络前沿技术",
+    "authors": ["陈刚", "杨明"],
+    "sequence": ["first", "corresponding"],
+    "institutions": ["中国科学院", "上海交通大学"],
+    "institution_location": ["北京市", "上海市"],
+    "email": ["chen@example.com", "yang@example.com"],
+    "doi": "10.5678/gnn.tech.2023",
+    "publishDate": "2023-03-20",
+    "journal": "模式识别与人工智能",
+    "journal_issue": "Vol. 36, No. 5",
+    "keywords": ["图神经网络", "深度学习", "表示学习"]
+  },
+  {
+    "title": "边缘计算在物联网中的应用",
+    "authors": ["刘勇", "赵敏", "钱伟"],
+    "sequence": ["first", "additional", "corresponding"],
+    "institutions": ["华为技术有限公司", "中兴通讯", "电子科技大学"],
+    "institution_location": ["深圳市", "深圳市", "成都市"],
+    "email": ["liu@example.com", "zhao@example.com", "qian@example.com"],
+    "doi": "10.9012/iot.edge.2023",
+    "publishDate": "2023-04-10",
+    "conference": "中国物联网大会",
+    "conference_time": "2023-04-05",
+    "conference_location": "北京",
+    "keywords": ["边缘计算", "物联网", "分布式系统"]
+  },
+  {
+    "title": "区块链安全性分析",
+    "authors": ["孙静", "周磊"],
+    "sequence": ["corresponding", "first"],
+    "institutions": ["浙江大学", "阿里巴巴"],
+    "institution_location": ["杭州市", "杭州市"],
+    "email": ["sun@example.com", "zhou@example.com"],
+    "doi": "10.3456/blockchain.sec.2023",
+    "publishDate": "2023-05-25",
+    "journal": "信息安全学报",
+    "journal_issue": "Vol. 42, No. 3",
+    "keywords": ["区块链", "安全", "密码学", "共识算法"]
+  },
+  {
+    "title": "生成式对抗网络研究进展",
+    "authors": ["郑亮", "吴佳", "苏明"],
+    "sequence": ["first", "additional", "corresponding"],
+    "institutions": ["腾讯AI Lab", "微软亚洲研究院", "香港科技大学"],
+    "institution_location": ["深圳市", "北京市", "香港"],
+    "email": ["zheng@example.com", "wu@example.com", "su@example.com"],
+    "doi": "10.7890/gan.review.2023",
+    "publishDate": "2023-06-30",
+    "conference": "CVPR",
+    "conference_time": "2023-06-15",
+    "conference_location": "Vancouver, Canada",
+    "keywords": ["生成式对抗网络", "深度学习", "计算机视觉"]
+  }
+]

@@ -12,17 +12,6 @@
     >
       <div class="conference-header">
         <h1 class="conference-name">{{ containerData.name }}</h1>
-        <div class="conference-info">
-          <div v-if="containerData.conferenceTime" class="conference-time">
-            <calendar-outlined /> {{ formatDate(containerData.conferenceTime) }}
-          </div>
-          <div
-            v-if="containerData.conferenceLocation"
-            class="conference-location"
-          >
-            <environment-outlined /> {{ containerData.conferenceLocation }}
-          </div>
-        </div>
       </div>
 
       <!-- 文献列表 -->
@@ -52,19 +41,19 @@
                 </router-link>
               </template>
 
-              <!-- 文件夹列 -->
-              <template v-else-if="column.key === 'folder'">
-                <router-link
-                  :to="`/folder/${record.directory_id}`"
-                  class="folder-name"
-                >
-                  {{ record.directory_name }}
-                </router-link>
+              <!-- 发布日期 -->
+              <template v-else-if="column.key === 'date'">
+                {{ formatDate(record.publication_date) || "--" }}
               </template>
 
-              <!-- 日期列 -->
-              <template v-else-if="column.key === 'date'">
-                {{ formatDate(record.publication_date) }}
+              <!-- 会议日期 -->
+              <template v-else-if="column.key === 'conference_time'">
+                {{ formatDate(record.conference_time) || "--" }}
+              </template>
+
+              <!-- 会议地点 -->
+              <template v-else-if="column.key === 'conference_locaton'">
+                {{ record.conference_location || "--" }}
               </template>
             </template>
           </a-table>
@@ -117,9 +106,16 @@ const documentColumns = [
     width: "25%",
   },
   {
-    title: "所在文件夹",
-    dataIndex: "directory_name",
-    key: "folder",
+    title: "会议时间",
+    dataIndex: "conference_time",
+    key: "conference_time",
+    ellipsis: true,
+    width: "25%",
+  },
+  {
+    title: "会议地点",
+    dataIndex: "conference_location",
+    key: "conference_location",
     ellipsis: true,
     width: "25%",
   },

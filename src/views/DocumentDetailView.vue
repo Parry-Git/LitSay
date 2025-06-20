@@ -15,16 +15,6 @@
             :rows="15"
             placeholder="支持Markdown格式..."
           />
-          <div class="markdown-tips">
-            <p>支持Markdown格式，例如：</p>
-            <ul>
-              <li># 一级标题</li>
-              <li>**粗体**</li>
-              <li>*斜体*</li>
-              <li>- 列表项</li>
-              <li>[链接](http://example.com)</li>
-            </ul>
-          </div>
         </a-tab-pane>
         <a-tab-pane key="preview" tab="预览">
           <div class="note-preview" v-html="renderedEditingNote"></div>
@@ -105,7 +95,18 @@
               <h3 class="section-title">
                 <book-outlined class="section-icon" /> 期刊
               </h3>
-              <a class="journal-name clickable" @click="navigateToJournal()">
+              <a
+                v-if="documentData.journal_issue"
+                class="journal-name clickable"
+                @click="navigateToJournal()"
+              >
+                {{ documentData.journal }} - {{ documentData.journal_issue }}
+              </a>
+              <a
+                v-else
+                class="journal-name clickable"
+                @click="navigateToJournal()"
+              >
                 {{ documentData.journal }}
               </a>
             </div>
@@ -117,6 +118,15 @@
                 <global-outlined class="section-icon" /> 会议
               </h3>
               <a
+                v-if="documentData.conference_time"
+                class="conference-name clickable"
+                @click="navigateToConference()"
+              >
+                {{ documentData.conference }} -
+                {{ formatDate(documentData.conference_time) }}
+              </a>
+              <a
+                v-else
                 class="conference-name clickable"
                 @click="navigateToConference()"
               >
@@ -186,6 +196,17 @@
             </div>
           </a-col>
 
+          <a-col :span="12" v-if="documentData.local_url">
+            <div class="info-section">
+              <h3 class="section-title">
+                <folder-outlined class="section-icon" /> 本地路径
+              </h3>
+              <div class="copy-link" @click="handleURL">
+                {{ documentData.local_url }}
+              </div>
+            </div>
+          </a-col>
+
           <!-- 上传时间 -->
           <a-col :span="24" v-if="documentData.uploadTime">
             <div class="meta-info">
@@ -216,29 +237,6 @@
           ></div>
           <a-empty v-else description="暂无笔记" />
         </a-card>
-      </div>
-
-      <!-- 文件预览部分 - 如果有的话 -->
-      <div class="preview-section" v-if="documentData.local_url">
-        <h2 class="section-header">文档预览</h2>
-        <div class="preview-container">
-          <iframe
-            v-if="isPdfUrl(documentData.local_url)"
-            :src="`${baseUrl}/uploads/${documentData.local_url}`"
-            class="pdf-preview"
-          ></iframe>
-          <div v-else class="preview-placeholder">
-            <file-pdf-outlined class="pdf-icon" />
-            <p>此文档类型无法预览</p>
-            <a-button
-              type="primary"
-              :href="`${baseUrl}/uploads/${documentData.local_url}`"
-              target="_blank"
-            >
-              打开文档
-            </a-button>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -335,6 +333,7 @@ const fetchDocumentData = async () => {
     if (response.data && response.data.code === 0) {
       documentData.value = response.data.data;
       document.title = `${documentData.value.title} - LitSay`;
+      // console.log("文档详情数据:", documentData.value);
 
       // 初始化评星
       stars.value = documentData.value.stars || 0;
@@ -390,13 +389,13 @@ const goBack = () => {
 
 // 处理评星变更
 const handleStarsChange = (value) => {
-  console.log("评星变更为:", value);
+  // console.log("评星变更为:", value);
   stars.value = value;
 };
 
 // 保存评星
 const saveStars = async () => {
-  console.log("保存评星:", stars.value);
+  // console.log("保存评星:", stars.value);
   savingStars.value = true;
   try {
     await updateDocumentMetadata(route.params.id, { stars: stars.value });
@@ -447,6 +446,27 @@ const navigateToAuthor = (index: number) => {
   } else {
     console.log("未找到作者ID");
     message.info("作者详情暂无法访问");
+  }
+};
+
+// 处理本地URL点击
+const handleURL = () => {
+  if (documentData.value?.local_url) {
+    // 去除可能包含的引号
+    const cleanPath = documentData.value.local_url.replace(/["']/g, "");
+
+    // 复制到剪贴板
+    navigator.clipboard
+      .writeText(cleanPath)
+      .then(() => {
+        message.success("本地路径已复制到剪贴板");
+      })
+      .catch((err) => {
+        console.error("复制失败:", err);
+        message.error("复制失败，请手动选择并复制路径");
+      });
+  } else {
+    message.warning("文件地址不可用");
   }
 };
 
@@ -758,6 +778,16 @@ onMounted(() => {
   border-radius: 4px;
   font-size: 12px;
   color: #666;
+}
+
+.copy-link {
+  cursor: pointer;
+}
+
+.copy-link:hover {
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  padding: 2px;
 }
 
 .markdown-tips ul {

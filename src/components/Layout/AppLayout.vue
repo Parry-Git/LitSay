@@ -3,8 +3,8 @@
     <!-- 顶部导航栏 -->
     <header class="app-header">
       <div class="header-left">
-        <img src="@/assets/logo.png" alt="Drive Logo" class="logo" />
-        <span class="logo-text">文献管理</span>
+        <img src="@/assets/logo3.png" alt="Drive Logo" class="logo" />
+        <span class="logo-text">文献一言</span>
       </div>
       <div class="header-center" ref="headerCenterRef">
         <el-input
@@ -147,9 +147,9 @@
                 <template #icon><user-outlined /></template>
                 个人资料
               </a-menu-item>
-              <a-menu-item key="settings">
-                <template #icon><setting-outlined /></template>
-                设置
+              <a-menu-item v-if="isAdmin" key="manage" @click="goToAdmin">
+                <template #icon><team-outlined /></template>
+                用户管理
               </a-menu-item>
               <a-menu-divider />
               <a-menu-item key="logout" @click="handleLogout">
@@ -191,7 +191,7 @@
       </main>
     </div>
 
-    <!-- 用户控制浮窗 -->
+    <!-- 用户控制浮窗 - 修复挂载问题 -->
     <a-drawer
       title="个人资料"
       :visible="showUserDrawer"
@@ -202,12 +202,9 @@
     >
       <div class="user-profile">
         <div class="user-profile-header">
-          <div class="profile-username-box">
-            {{ userInfo.username || "未登录用户" }}
-          </div>
           <div class="profile-info">
             <h2>{{ userInfo.username || "未登录用户" }}</h2>
-            <p>{{ userInfo.role === "admin" ? "管理员" : "普通用户" }}</p>
+            <p>{{ userInfo.role ? "管理员" : "普通用户" }}</p>
           </div>
         </div>
 
@@ -221,13 +218,10 @@
               {{ userInfo.username || "未登录" }}
             </a-descriptions-item>
             <a-descriptions-item label="用户角色">
-              {{ userInfo.role === "admin" ? "管理员" : "普通用户" }}
+              {{ userInfo.role ? "管理员" : "普通用户" }}
             </a-descriptions-item>
             <a-descriptions-item label="ID">
               {{ userInfo.id || "N/A" }}
-            </a-descriptions-item>
-            <a-descriptions-item label="创建时间">
-              {{ userInfo.createdAt || "未知" }}
             </a-descriptions-item>
           </a-descriptions>
         </div>
@@ -235,12 +229,6 @@
         <a-divider />
 
         <div class="profile-actions">
-          <a-button type="primary" block @click="handleEditProfile"
-            >编辑资料</a-button
-          >
-          <a-button style="margin-top: 16px" block @click="handleChangePassword"
-            >修改密码</a-button
-          >
           <a-button
             type="danger"
             style="margin-top: 16px"
@@ -276,11 +264,17 @@ import LogoutOutlined from "@ant-design/icons-vue/LogoutOutlined";
 import DownOutlined from "@ant-design/icons-vue/DownOutlined";
 import BarChartOutlined from "@ant-design/icons-vue/BarChartOutlined";
 import PlusOutlined from "@ant-design/icons-vue/PlusOutlined";
+import TeamOutlined from "@ant-design/icons-vue/TeamOutlined";
 
 import FolderTree from "@/components/FolderTree.vue";
 import { searchLibrary } from "@/api/load";
 import { logout } from "@/api/auth";
 import { useEventBus } from "@vueuse/core";
+
+// const goToManage = () => {
+//   // 假设管理中心的路由是 /manage
+//   router.push("/manage");
+// };
 
 // 添加这一行解决showUserDrawer未定义的问题
 const showUserDrawer = ref(false);
@@ -293,7 +287,12 @@ const icons = {
   DownOutlined,
   BarChartOutlined,
   PlusOutlined,
+  TeamOutlined,
 };
+
+const isAdmin = computed(() => {
+  return userInfo.role;
+});
 
 // 定义搜索结果类型
 interface SearchResult {
@@ -329,12 +328,6 @@ const router = useRouter();
 const searchQuery = ref("");
 const showAdvancedSearch = ref(false);
 
-// 移除搜索结果相关的变量
-// const searching = ref(false);
-// const searchResults = ref<SearchResult[]>([]);
-// const showSearchResults = ref(false);
-// let hideResultsTimeout: number | null = null;
-
 // 高级搜索相关
 const advancedSearchForm = ref<AdvancedSearchForm>({
   query: "",
@@ -353,6 +346,10 @@ const dateRangeValue = ref<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([
   null,
   null,
 ]);
+
+const goToAdmin = () => {
+  router.push("/admin");
+};
 
 // 处理日期范围变化
 const handleDateRangeChange = (
@@ -386,14 +383,15 @@ const isLoggedIn = computed(() => {
 // 获取用户信息
 const getUserInfo = () => {
   // 从 localStorage 获取用户信息
+  // console.log(localStorage);
   const storedUserInfo = localStorage.getItem("userInfo");
+  // console.log(storedUserInfo);
   if (storedUserInfo) {
     try {
       const parsedInfo = JSON.parse(storedUserInfo);
       userInfo.username = parsedInfo.username || "";
       userInfo.role = parsedInfo.role || "";
       userInfo.id = parsedInfo.id || "";
-      userInfo.createdAt = parsedInfo.createdAt || "2023-01-01";
     } catch (e) {
       console.error("解析用户信息失败", e);
     }
@@ -590,6 +588,7 @@ const handleLogout = async () => {
 // 编辑个人资料
 const handleEditProfile = () => {
   ElMessage.info("编辑个人资料功能开发中...");
+  console.log("info:", userInfo);
 };
 
 // 修改密码
@@ -620,9 +619,10 @@ const getPopupContainer = () => {
   return document.body;
 };
 
-// 组件挂载时获取用户信息
+// 确保在组件挂载后才获取用户信息
 onMounted(() => {
   getUserInfo();
+  console.log("AppLayout组件已挂载，用户信息:", userInfo);
 });
 </script>
 

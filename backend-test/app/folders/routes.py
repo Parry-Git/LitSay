@@ -25,7 +25,7 @@ def get_folder_tree():
             root_dir_id = query_db("""
                 INSERT INTO directory (user_id, parent_id, directory_name)
                 VALUES (%s, NULL, %s)
-            """, (user_id, "根目录"), commit=True)
+            """, (user_id, "我的文献库"), commit=True)
             
             # 为根目录添加自引用闭包关系
             query_db("""
@@ -33,17 +33,17 @@ def get_folder_tree():
                 VALUES (%s, %s, %s, %s)
             """, (root_dir_id, root_dir_id, 0, user_id), commit=True)
             
-            # 添加"我的文献库"文件夹
-            my_lib_id = query_db("""
-                INSERT INTO directory (user_id, parent_id, directory_name)
-                VALUES (%s, %s, %s)
-            """, (user_id, root_dir_id, "我的文献库"), commit=True)
+            # # 添加"我的文献库"文件夹
+            # my_lib_id = query_db("""
+            #     INSERT INTO directory (user_id, parent_id, directory_name)
+            #     VALUES (%s, %s, %s)
+            # """, (user_id, root_dir_id, "我的文献库"), commit=True)
             
-            # 添加闭包关系
-            query_db("""
-                INSERT INTO directory_closure (ancestor_id, descendant_id, depth, user_id)
-                VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)
-            """, (my_lib_id, my_lib_id, 0, user_id, root_dir_id, my_lib_id, 1, user_id), commit=True)
+            # # 添加闭包关系
+            # query_db("""
+            #     INSERT INTO directory_closure (ancestor_id, descendant_id, depth, user_id)
+            #     VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)
+            # """, (my_lib_id, my_lib_id, 0, user_id, root_dir_id, my_lib_id, 1, user_id), commit=True)
             
             # 重新查询文件夹结构
             folders = query_db("""

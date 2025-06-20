@@ -44,14 +44,9 @@
                 </router-link>
               </template>
 
-              <!-- 文件夹列 -->
-              <template v-else-if="column.key === 'folder'">
-                <router-link
-                  :to="`/folder/${record.directory_id}`"
-                  class="folder-name"
-                >
-                  {{ record.directory_name }}
-                </router-link>
+              <!-- 文献期号 -->
+              <template v-else-if="column.key === 'journal_issue'">
+                {{ record.journal_issue }}
               </template>
 
               <!-- 日期列 -->
@@ -109,9 +104,9 @@ const documentColumns = [
     width: "25%",
   },
   {
-    title: "所在文件夹",
-    dataIndex: "directory_name",
-    key: "folder",
+    title: "期号",
+    dataIndex: "journal_issue",
+    key: "journal_issue",
     ellipsis: true,
     width: "25%",
   },

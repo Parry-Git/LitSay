@@ -28,6 +28,7 @@ const isDevelopment = process.env.NODE_ENV === "not";
  */
 export const getCurrentUserId = (): string | null => {
   const userInfo = localStorage.getItem("userInfo");
+  // console.log("获取到的数据：", userInfo);
   if (userInfo) {
     try {
       const parsedInfo = JSON.parse(userInfo);
@@ -48,7 +49,6 @@ export const getCurrentUserId = (): string | null => {
 export const getFolderContents = async (folderId: string | number) => {
   // 如果是开发环境，使用模拟数据
   if (isDevelopment) {
-    console.log("[Dev Mode] 使用模拟数据获取文件夹内容:", folderId);
     const mockData = mockGetFolderContents(folderId);
     // 模拟 API 返回结构
     return Promise.resolve({
@@ -84,7 +84,7 @@ export const createFolder = async (params: {
 }) => {
   // 如果是开发环境，模拟创建文件夹
   if (isDevelopment) {
-    console.log("[Dev Mode] 模拟创建文件夹:", params);
+    // console.log("[Dev Mode] 模拟创建文件夹:", params);
     // 返回一个模拟的成功响应
     return Promise.resolve({
       data: {
@@ -131,7 +131,7 @@ export const renameFolder = async (params: {
 }) => {
   // 如果是开发环境，模拟重命名文件夹
   if (isDevelopment) {
-    console.log("[Dev Mode] 模拟重命名文件夹:", params);
+    // console.log("[Dev Mode] 模拟重命名文件夹:", params);
     return Promise.resolve({
       data: {
         code: 0,
@@ -170,7 +170,7 @@ export const renameFolder = async (params: {
 export const deleteFolder = async (folderId: string | number) => {
   // 如果是开发环境，模拟删除文件夹
   if (isDevelopment) {
-    console.log("[Dev Mode] 模拟删除文件夹:", folderId);
+    // console.log("[Dev Mode] 模拟删除文件夹:", folderId);
     return Promise.resolve({
       data: {
         code: 0,
@@ -205,7 +205,7 @@ export const deleteFolder = async (folderId: string | number) => {
 export const uploadPdfFiles = async (files: File[], folderId?: string) => {
   // 如果是开发环境，模拟上传文件
   if (isDevelopment) {
-    console.log("[Dev Mode] 模拟上传文件:", { files, folderId });
+    // console.log("[Dev Mode] 模拟上传文件:", { files, folderId });
     // 创建模拟的文件名列表
     const uploadedFiles = files.map((file) => file.name);
     return Promise.resolve({
@@ -251,7 +251,7 @@ export const uploadPdfFiles = async (files: File[], folderId?: string) => {
 export const getFolderStructure = async () => {
   // 如果是开发环境，使用模拟数据
   if (isDevelopment) {
-    console.log("[Dev Mode] 使用模拟数据获取文件夹结构");
+    // console.log("[Dev Mode] 使用模拟数据获取文件夹结构");
     return Promise.resolve({
       data: {
         code: 0,

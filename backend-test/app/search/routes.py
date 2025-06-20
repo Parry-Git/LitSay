@@ -61,7 +61,7 @@ def search_library():
     
     # 验证搜索参数，修改为允许高级搜索时不提供查询内容
     has_advanced_filters = keywords_and or keywords_or or date_from or date_to or document_type
-    if not use_regex and (not query or len(query) < 2) and not has_advanced_filters:
+    if not use_regex and (not query or len(query) < 1) and not has_advanced_filters:
         return jsonify({
             "code": 1,
             "message": "搜索词太短或未提供任何搜索条件",

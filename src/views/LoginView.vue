@@ -2,8 +2,9 @@
   <div class="login-container">
     <div class="login-form-wrapper">
       <div class="login-header">
-        <img src="@/assets/logo.png" alt="Logo" class="logo" />
-        <h1 class="title">文献管理系统</h1>
+        <img src="@/assets/logo3.png" alt="Logo" class="logo" />
+        <h1 class="title">文献一言</h1>
+        <h2 class="head2">在线智能文献管理系统</h2>
       </div>
 
       <a-card class="login-card">
@@ -44,7 +45,6 @@
                 <a-checkbox v-model:checked="loginForm.remember"
                   >记住我</a-checkbox
                 >
-                <a class="forget-link">忘记密码？</a>
               </a-form-item>
 
               <a-form-item>
@@ -56,20 +56,6 @@
                   :loading="loading"
                 >
                   登录
-                </a-button>
-              </a-form-item>
-
-              <!-- 添加快速登录管理员账号按钮 -->
-              <a-form-item>
-                <a-button
-                  type="link"
-                  size="small"
-                  block
-                  @click="loginAsAdmin"
-                  :disabled="loading"
-                >
-                  <template #icon><crown-outlined /></template>
-                  快速登录为管理员（开发模式）
                 </a-button>
               </a-form-item>
 
@@ -144,17 +130,6 @@
           </a-tab-pane>
         </a-tabs>
       </a-card>
-
-      <!-- 添加环境信息 -->
-      <div v-if="isDev" class="dev-info">
-        <a-alert type="info" show-icon>
-          <template #message>开发模式</template>
-          <template #description>
-            <div>管理员账号: admin</div>
-            <div>密码: admin123</div>
-          </template>
-        </a-alert>
-      </div>
     </div>
   </div>
 </template>
@@ -232,13 +207,6 @@ const registerRules = {
   ],
 };
 
-// 快速管理员登录方法
-const loginAsAdmin = async () => {
-  loginForm.username = "admin";
-  loginForm.password = "admin123";
-  await handleLogin();
-};
-
 // 登录方法
 const handleLogin = async () => {
   try {
@@ -271,7 +239,7 @@ const handleLogin = async () => {
 
     // 正常登录流程
     const response = await login(loginForm.username, loginForm.password);
-    console.log("登录响应数据:", response); // 打印响应数据，方便调试
+    // console.log("登录响应数据:", response); // 打印响应数据，方便调试
 
     // 确保 localStorage 中存储了 token 和用户信息
     const token = response.token || response.data?.token;
@@ -279,12 +247,12 @@ const handleLogin = async () => {
 
     if (token) {
       localStorage.setItem("token", token);
-      console.log("Token 已存储:", token);
+      // console.log("Token 已存储:", token);
     }
 
     if (userData) {
       localStorage.setItem("userInfo", JSON.stringify(userData));
-      console.log("用户信息已存储:", userData);
+      // console.log("用户信息已存储:", userData);
     }
 
     message.success("登录成功");
@@ -358,7 +326,13 @@ const handleRegister = async () => {
 .title {
   font-weight: 600;
   color: rgba(0, 0, 0, 0.85);
-  font-size: 33px;
+  font-size: 39px;
+}
+
+.head2 {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 18px;
+  margin-bottom: 24px;
 }
 
 .login-card {
