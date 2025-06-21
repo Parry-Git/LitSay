@@ -29,7 +29,7 @@
 * **核心框架**:
     * 后端: Flask 3.1.1
     * 前端: Vue.js 5.0.8
-* **数据库**: OceanBase
+* **数据库**: OceanBase Cloud 云数据库
 * **依赖管理**:
     * 后端: Conda, Pip
     * 前端: Yarn
@@ -83,7 +83,7 @@ cd LitSay
 
 4.  **配置环境变量 (关键)**:
     在 `backend-test` 目录下找到 `.env` 和 `.flaskenv` 两个文件。
-    > **提示**: 为了方便测试，我们已将配置文件包含在仓库中，您可以使用默认配置，也可自行修改。
+    > **提示**: 为了方便测试，我们已将云端数据库连接、AI解析等配置内容包含在仓库中（提供了 gemini api 但未提供 qwen api）。 您可以直接使用我们开发过程中使用的云端 OceanBase 数据库中的现有架构。我们默认使用 qwen2.5-14b 模型，需要您手动在 `.env` 中填写您的 api。您可以在 `.env` 更换配置为 gemini 2.5 flash。
 
     **`.env` 文件内容:**
     ```ini
@@ -104,6 +104,9 @@ cd LitSay
     
     # Gemini API Key (在批改期间应该是可用的，如果不可用，请联系我们或自行填补)
     GEMINI_KEY="AIzaSyDSBULm2E_tWhsygPl9OOwQhbQvGGRgXh8"
+    # Qwen API Key
+    QWEN_KEY="your-api-key"  # 请替换为您的 Qwen API Key
+    USE_API="qwen"  # 可选值: "gemini", "qwen"
     ```
 
     **`.flaskenv` 文件内容:**
@@ -153,10 +156,14 @@ cd LitSay
     * 上传 `LitSay/examples/` 目录下的相应文件。
     * 系统将解析文件并将数据批量存入数据库。导入成功后，您将在文献列表中看到这些测试数据。
 
+同时在 `pdf_examples` 中我们提供了5篇文献pdf用于快速测试上传解析效果。
+
 > **备用测试方案**: 您也可以直接登录我们预设的管理员账户进行测试。
 > * **账号**: `Paul`
 > * **密码**: `123456`
 > 此账户下已有部分数据，可用于体验搜索、导出等功能。
+ 
+> ❗ 出于安全性，在批改后我们会及时清除这部分的配置内容
 
 ---
 
